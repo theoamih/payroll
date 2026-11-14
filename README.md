@@ -22,7 +22,7 @@ or JDK command, so it runs the same way on Windows, macOS and Linux.
 
 | Command | What it does | Result on the current code |
 |---|---|---|
-| `mvn clean verify` | Compiles, runs every test, and writes the JaCoCo coverage report to `target/site/jacoco/index.html` | 99 tests, 0 failures, `BUILD SUCCESS` |
+| `mvn clean verify` | Compiles, runs every test, and writes the JaCoCo coverage report to `target/site/jacoco/index.html` | 175 tests, 0 failures, `BUILD SUCCESS` |
 | `mvn compile exec:java "-Dexec.mainClass=com.rosewood.payroll.app.Demo"` | Runs the demo, which prints four payslips | The output shown below |
 | `mvn test-compile org.pitest:pitest-maven:mutationCoverage` | Runs PIT mutation testing and writes the report to `target/pit-reports/index.html` | 75 mutants, 66 killed, test strength 99% (explained under [Tests](#tests)) |
 | `mvn clean javadoc:javadoc -Ddoclint=all` | Builds the Javadoc with every lint check switched on, into `target/reports/apidocs/index.html` | 0 warnings |
@@ -84,8 +84,8 @@ goes through these steps, in this order:
    the gross pay.
 4. **Work out tax and net pay.** The band works out the tax, rounded to pesewas, and
    net pay is gross minus tax.
-5. **Return a `Payslip`.** The payslip refuses to exist if net pay is not exactly
-   gross minus tax.
+5. **Return a `Payslip`.** The payslip refuses to exist if tax is below zero or more
+   than gross pay, or if net pay is not exactly gross minus tax.
 
 Worked example, Kwame Owusu, 50 hours at 30: base pay 50 x 30 = 1500, plus overtime
 premium 10 x 30 x 0.5 = 150, so gross is 1650.00. That falls in MEDIUM (1000 up to
@@ -141,6 +141,7 @@ subject names the IDs it fixes, so `git log --oneline --grep=C6` shows the commi
 | `BigDecimal` and a `Money` type | `double` | `double` cannot hold most decimal amounts exactly (`3.9425000000000003`). `Money` rounds in one place, so the rule cannot drift |
 | Round half-up | Half-even (banker's rounding) | It is how a person checks a payslip by hand, so an employee working it out gets the same answer |
 | Round gross once and tax separately, then net = gross - tax | Rounding net pay on its own | The three lines on a payslip always add up, and `Payslip` enforces it |
+| `Payslip` refuses tax below zero or above gross pay | Trusting each band to work out its tax correctly | A new band's rule could take more than a small gross. The startup check on the bands sees their ranges, not the amounts they take, and every band's result passes through `Payslip`, so a band like that fails on the first payslip instead of paying someone a negative amount |
 | `Hours` and `HourlyRate` types that only refuse null | Types that also check their own value | A swap no longer compiles, and every timesheet rule stays in `GrossPayCalculator`, so a bad timesheet is still a checked `InvalidPayInputException` the caller must handle. `HourlyRate` is not `Money`, because a rate such as 124.975 must not be rounded |
 | Check the timesheet before looking up the employee | Lookup first | A bad timesheet is reported as what it is, and the employee store is not touched. A test proves the store is never called |
 | Reject a rate of zero, set no maximum for hours | Allowing zero, or inventing a cap | A zero rate is almost certainly a data-entry mistake. The pay period is not known, so any maximum for hours would be made up |
@@ -175,8 +176,11 @@ The test shows that:
 - LOW, MEDIUM and HIGH produce exactly the same payslips as before
 - forgetting to give HIGH an upper limit stops the schedule being created, with the
   message `band HIGH has no upper limit, so band VERY HIGH can never apply`
+- a band whose rule takes more than the gross pay is refused on the first payslip, with
+  the message `tax GHS 100.00 must not be more than gross pay GHS 40.00`
 
-The commit that added this test changed no production class.
+The commit that added the first three of these changed no production class. The last
+one was added with the `Payslip` check it relies on.
 
 **The assumption behind this design:** a band is a range of gross pay, and "its own
 rules" means how much tax it takes from that gross. If the new band depended on
@@ -191,7 +195,7 @@ interface would have to change.
 | `InvalidPayInputException` | Checked, a `PayrollException` | Hours are negative, or the rate is zero or less | `getField()`, `getRejectedValue()` |
 | `InvalidTaxScheduleException` | Unchecked, an `IllegalArgumentException` | The bands do not start at zero, leave a gap, overlap, or do not end with one open-ended band | A message naming the bands involved |
 | `NullPointerException` | Unchecked | Any required argument is null | A message naming the argument, such as `employeeId must not be null`. A null band inside the list given to `TaxSchedule` is reported by `List.copyOf`, without a message |
-| `IllegalArgumentException` | Unchecked | A payslip whose lines do not add up, a duplicate employee id, or a badly set up band | A message with the values involved |
+| `IllegalArgumentException` | Unchecked | A payslip whose tax is negative or more than gross pay, or whose lines do not add up; a duplicate employee id; or a badly set up band | A message with the values involved |
 | `IllegalStateException` | Unchecked | `TaxSchedule.bandFor` is given an amount no band covers | The amount. A checked schedule covers everything from zero up, so only a negative amount, which gross pay never is, can cause it |
 
 Nothing catches `Exception`, and nothing is swallowed. The only `catch` in the
@@ -209,8 +213,9 @@ first, so the tests check that results are right, not just that code ran.
 |---|---|---|
 | [PayrollCalculatorTest](src/test/java/com/rosewood/payroll/netpay/PayrollCalculatorTest.java) | 3 | The original AI tests, fixed in place (T1 to T3) |
 | [PayrollCalculatorBehaviourTest](src/test/java/com/rosewood/payroll/netpay/PayrollCalculatorBehaviourTest.java) | 25 | Every band and both sides of every band edge, overtime, zero hours, the full payslip, unknown and missing employees, a failing repository, invalid input, and rounding |
-| [AddingATaxBandTest](src/test/java/com/rosewood/payroll/netpay/AddingATaxBandTest.java) | 5 | A new band with its own rule plugs in without changing existing classes |
-| [PayslipTest](src/test/java/com/rosewood/payroll/netpay/PayslipTest.java) | 3 | A payslip whose lines do not add up is refused |
+| [AddingATaxBandTest](src/test/java/com/rosewood/payroll/netpay/AddingATaxBandTest.java) | 6 | A new band with its own rule plugs in without changing existing classes, and a band that takes more than the gross pay is refused |
+| [PayRulesThatAlwaysHoldTest](src/test/java/com/rosewood/payroll/netpay/PayRulesThatAlwaysHoldTest.java) | 72 | Rules that must hold for every timesheet, checked on a grid of 8 hours values x 8 rates: tax between zero and gross pay, net pay never negative, and more hours never less gross pay |
+| [PayslipTest](src/test/java/com/rosewood/payroll/netpay/PayslipTest.java) | 6 | A payslip whose tax is below zero or above gross pay, or whose lines do not add up, is refused, and both edges are accepted |
 | [GrossPayCalculatorTest](src/test/java/com/rosewood/payroll/pay/GrossPayCalculatorTest.java) | 10 | Overtime, rounding gross once, and timesheet checks |
 | [HoursTest](src/test/java/com/rosewood/payroll/pay/HoursTest.java) | 2 | Part hours kept exactly, and a missing value refused |
 | [HourlyRateTest](src/test/java/com/rosewood/payroll/pay/HourlyRateTest.java) | 2 | A rate kept without rounding, and a missing value refused |
@@ -224,12 +229,22 @@ Mockito is used where a test needs the repository to behave in a way the real on
 cannot, for example to throw, or to prove it was never called. The calculator under
 test is always the real one.
 
+Most tests are worked examples. `PayRulesThatAlwaysHoldTest` checks rules instead, on
+a fixed grid: every hours value in a short list combined with every rate in another,
+written out in the test so every run uses the same inputs. The values sit on the
+overtime threshold and on each band edge. One rule is left out on purpose, "more gross
+pay never means less net pay", because the tax cliff makes it false (see
+[Kept on purpose](#kept-on-purpose)).
+
+PIT makes no mutants for the checks inside the `Payslip` record. Each one was checked
+by switching it off in a throwaway copy and confirming that its test fails.
+
 ### Before and after
 
 | Measure | Starter | Now |
 |---|---|---|
-| Tests | 3 | 99 |
-| JaCoCo line coverage | 10 of 16 lines in `PayrollCalculator` | 177 of 193 lines, and all 16 missed lines are in `Demo`. 44 of 44 branches |
+| Tests | 3 | 175 |
+| JaCoCo line coverage | 10 of 16 lines in `PayrollCalculator` | 182 of 198 lines, and all 16 missed lines are in `Demo`. 48 of 48 branches |
 | PIT mutants killed | 2 of 15 | 66 of 75 |
 
 Of the 9 mutants PIT does not kill:
