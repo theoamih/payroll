@@ -23,7 +23,7 @@ class PayrollCalculatorTest {
         PayrollCalculator calculator = new PayrollCalculator(
                 new InMemoryEmployeeRepository(List.of(new Employee("e1", "Efua Sarpong"))));
 
-        Money net = calculator.calculateNetPay("e1", new BigDecimal("40"), new BigDecimal("20"));
+        Money net = calculator.calculatePayslip("e1", new BigDecimal("40"), new BigDecimal("20")).netPay();
 
         // 40 h at 20 is a gross of 800, in the LOW band (5%): 800 - 40 = 760
         assertEquals(new Money(new BigDecimal("760.00")), net);
@@ -37,7 +37,7 @@ class PayrollCalculatorTest {
 
         PayrollCalculator calculator = new PayrollCalculator(repository);
 
-        Money net = calculator.calculateNetPay("e2", new BigDecimal("50"), new BigDecimal("30"));
+        Money net = calculator.calculatePayslip("e2", new BigDecimal("50"), new BigDecimal("30")).netPay();
 
         // 50 h at 30: 1500, plus 10 overtime hours x 30 x 0.5 = 150, is a gross of 1650,
         // in the MEDIUM band (15%): 1650 - 247.50 = 1402.50
@@ -49,7 +49,7 @@ class PayrollCalculatorTest {
         PayrollCalculator calculator = new PayrollCalculator(
                 new InMemoryEmployeeRepository(List.of(new Employee("e1", "Efua Sarpong"))));
 
-        Money net = calculator.calculateNetPay("e1", new BigDecimal("35"), new BigDecimal("25"));
+        Money net = calculator.calculatePayslip("e1", new BigDecimal("35"), new BigDecimal("25")).netPay();
 
         // 35 h at 25 is a gross of 875, in the LOW band (5%): 875 - 43.75 = 831.25
         assertEquals(new Money(new BigDecimal("831.25")), net);

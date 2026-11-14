@@ -49,7 +49,7 @@ class PayrollCalculatorBehaviourTest {
     @Nested
     class Construction {
 
-        // A null repository would otherwise only fail later, inside calculateNetPay,
+        // A null repository would otherwise only fail later, inside calculatePayslip,
         // far from the code that made the mistake. It is refused straight away.
         @Test
         void refusesAMissingRepository() {
@@ -72,7 +72,7 @@ class PayrollCalculatorBehaviourTest {
         void taxesGrossPayAtTheRateOfItsBand(BigDecimal hours, BigDecimal rate, String band, String expectedNet)
                 throws PayrollException {
 
-            Money net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
+            Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, hours, rate).netPay();
 
             assertEquals(money(expectedNet), net);
         }
@@ -91,7 +91,7 @@ class PayrollCalculatorBehaviourTest {
         void paysHoursOverFortyAtTimeAndAHalf(BigDecimal hours, BigDecimal rate, String rule, String expectedNet)
                 throws PayrollException {
 
-            Money net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
+            Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, hours, rate).netPay();
 
             assertEquals(money(expectedNet), net);
         }
@@ -101,9 +101,32 @@ class PayrollCalculatorBehaviourTest {
     // the failures below, which the starter code also reported as zero.
     @Test
     void paysNothingForZeroHoursWorked() throws PayrollException {
-        Money net = calculator.calculateNetPay(KNOWN_EMPLOYEE, BigDecimal.ZERO, RATE_OF_TWENTY);
+        Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, BigDecimal.ZERO, RATE_OF_TWENTY).netPay();
 
         assertEquals(money("0.00"), net);
+    }
+
+    @Nested
+    class PayslipLines {
+
+        // Every line of the payslip is checked, not only net pay, because a payslip with
+        // the right net but a wrong gross or tax is still a wrong payslip.
+        //   50h at 30: 1500 + 10 overtime hours x 30 x 0.5 = 1650 gross,
+        //   MEDIUM band (15%) tax 247.50, net 1402.50
+        @Test
+        void showsTheEmployeeGrossPayTaxAndNetPay() throws PayrollException {
+            Employee kwame = new Employee("e2", "Kwame Owusu");
+
+            PayrollCalculator calculatorForKwame = new PayrollCalculator(
+                    new InMemoryEmployeeRepository(List.of(kwame)));
+
+            Payslip payslip = calculatorForKwame.calculatePayslip("e2", new BigDecimal("50"), new BigDecimal("30"));
+
+            assertSame(kwame, payslip.employee());
+            assertEquals(money("1650.00"), payslip.grossPay());
+            assertEquals(money("247.50"), payslip.tax());
+            assertEquals(money("1402.50"), payslip.netPay());
+        }
     }
 
     @Nested
@@ -114,7 +137,7 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsAnEmployeeWhoDoesNotExist() {
             EmployeeNotFoundException error = assertThrows(EmployeeNotFoundException.class,
-                    () -> calculator.calculateNetPay("unknown", FORTY_HOURS, RATE_OF_TWENTY),
+                    () -> calculator.calculatePayslip("unknown", FORTY_HOURS, RATE_OF_TWENTY),
                     "an employee who does not exist must be rejected, not paid");
 
             assertEquals("unknown", error.getEmployeeId());
@@ -126,7 +149,7 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsAMissingEmployeeId() {
             assertThrows(NullPointerException.class,
-                    () -> calculator.calculateNetPay(null, FORTY_HOURS, RATE_OF_TWENTY),
+                    () -> calculator.calculatePayslip(null, FORTY_HOURS, RATE_OF_TWENTY),
                     "a missing employee id must be rejected, not paid");
         }
     }
@@ -146,7 +169,7 @@ class PayrollCalculatorBehaviourTest {
             PayrollCalculator calculatorWithFailingStore = new PayrollCalculator(repository);
 
             IllegalStateException thrown = assertThrows(IllegalStateException.class,
-                    () -> calculatorWithFailingStore.calculateNetPay(KNOWN_EMPLOYEE, FORTY_HOURS, RATE_OF_TWENTY));
+                    () -> calculatorWithFailingStore.calculatePayslip(KNOWN_EMPLOYEE, FORTY_HOURS, RATE_OF_TWENTY));
 
             // The same exception object, not a replacement, so no detail about the
             // original failure is lost on the way to the caller.
@@ -162,7 +185,7 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsNegativeHours() {
             InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, new BigDecimal("-10"), RATE_OF_TWENTY),
+                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, new BigDecimal("-10"), RATE_OF_TWENTY),
                     "negative hours must be rejected");
 
             assertEquals("hoursWorked", error.getField());
@@ -175,7 +198,7 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsHoursJustBelowZero() {
             InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, new BigDecimal("-0.01"), RATE_OF_TWENTY));
+                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, new BigDecimal("-0.01"), RATE_OF_TWENTY));
 
             assertEquals("hoursWorked", error.getField());
         }
@@ -184,7 +207,7 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsANegativeRate() {
             InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, FORTY_HOURS, new BigDecimal("-20")),
+                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, FORTY_HOURS, new BigDecimal("-20")),
                     "a negative hourly rate must be rejected");
 
             assertEquals("hourlyRate", error.getField());
@@ -197,7 +220,7 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsAZeroRate() {
             InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, FORTY_HOURS, BigDecimal.ZERO));
+                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, FORTY_HOURS, BigDecimal.ZERO));
 
             assertEquals("hourlyRate", error.getField());
         }
@@ -207,9 +230,9 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsMissingHoursOrRate() {
             assertThrows(NullPointerException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, null, RATE_OF_TWENTY));
+                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, null, RATE_OF_TWENTY));
             assertThrows(NullPointerException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, FORTY_HOURS, null));
+                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, FORTY_HOURS, null));
         }
 
         // Invalid input is refused before the employee is looked up, so a payslip that
@@ -221,7 +244,7 @@ class PayrollCalculatorBehaviourTest {
             PayrollCalculator calculatorWithMockStore = new PayrollCalculator(repository);
 
             assertThrows(InvalidPayInputException.class,
-                    () -> calculatorWithMockStore.calculateNetPay(KNOWN_EMPLOYEE, new BigDecimal("-10"), RATE_OF_TWENTY));
+                    () -> calculatorWithMockStore.calculatePayslip(KNOWN_EMPLOYEE, new BigDecimal("-10"), RATE_OF_TWENTY));
 
             verifyNoInteractions(repository);
         }
@@ -242,7 +265,7 @@ class PayrollCalculatorBehaviourTest {
         void paysAnAmountInWholePesewas(BigDecimal hours, BigDecimal rate, String expectedNet)
                 throws PayrollException {
 
-            Money net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
+            Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, hours, rate).netPay();
 
             assertEquals(money(expectedNet), net);
         }
@@ -252,7 +275,7 @@ class PayrollCalculatorBehaviourTest {
         // have made the tax 0.00, so this test pins the chosen rule.
         @Test
         void roundsHalfAPesewaOfTaxUp() throws PayrollException {
-            Money net = calculator.calculateNetPay(KNOWN_EMPLOYEE, BigDecimal.ONE, new BigDecimal("0.10"));
+            Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, BigDecimal.ONE, new BigDecimal("0.10")).netPay();
 
             assertEquals(money("0.09"), net);
         }

@@ -27,18 +27,21 @@ public class PayrollCalculator {
     }
 
     /**
-     * Works out an employee's net pay for the hours worked.
+     * Works out an employee's payslip for the hours worked.
+     *
+     * <p>Nothing is printed here. The payslip is returned, so the caller decides how to
+     * show it, and tests can check every line of it.
      *
      * @param employeeId  the employee being paid
      * @param hoursWorked the hours worked in the pay period
      * @param hourlyRate  the pay for one ordinary hour, at any precision
-     * @return the net pay, after tax, in whole pesewas
+     * @return the payslip, with gross pay, tax and net pay in whole pesewas
      * @throws InvalidPayInputException  if hoursWorked is negative or hourlyRate is not
      *                                   above zero
      * @throws EmployeeNotFoundException if no employee has the given id
      * @throws NullPointerException      if any argument is null
      */
-    public Money calculateNetPay(String employeeId, BigDecimal hoursWorked, BigDecimal hourlyRate)
+    public Payslip calculatePayslip(String employeeId, BigDecimal hoursWorked, BigDecimal hourlyRate)
             throws InvalidPayInputException, EmployeeNotFoundException {
 
         Objects.requireNonNull(employeeId, "employeeId must not be null");
@@ -84,8 +87,7 @@ public class PayrollCalculator {
         Money tax = gross.times(taxRate);
         Money net = gross.minus(tax);
 
-        System.out.println("Net pay for " + employee.getName() + ": " + net);
-        return net;
+        return new Payslip(employee, gross, tax, net);
     }
 
     /**
