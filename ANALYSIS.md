@@ -16,9 +16,10 @@ On the surface the code looks finished:
 - JaCoCo says 10 of the 16 lines in `PayrollCalculator` are covered.
 
 Mutation testing tells a different story. PIT made 15 small deliberate changes to
-`PayrollCalculator`, such as turning `>` into `>=`, `+` into `-`, or dropping the
+`PayrollCalculator`, such as turning `<` into `<=`, `+` into `-`, or dropping the
 tax subtraction, and reran the tests after each one. The tests failed for 2 of the
-15. The other 13 broke the pay calculation and nothing noticed.
+15. The other 13 went unnoticed. Eleven of those change the pay; the other two
+don't, and Part 3 explains why.
 
 The demo also prints `0.0` for an employee who doesn't exist, which the README
 asks you to look at. That turned out to be the most important clue.
@@ -191,6 +192,9 @@ swapped, compiles fine and pays the wrong amount.
 The employee is looked up, but only to print their name. The hourly rate comes
 from whoever calls the method, so any employee can be paid any rate.
 
+The brief doesn't say where hourly rates should come from, so I've treated this as
+an assumption to confirm rather than a defect, and left it as it is.
+
 ### What I checked and didn't find
 
 I looked for Liskov Substitution and Interface Segregation problems too and
@@ -250,7 +254,7 @@ zero or less.
 
 10 of 16 lines covered sounds reasonable. But coverage only tells you a line ran,
 not that anything checked what it produced. PIT is the better measure here, and
-it says the tests miss 13 of 15 planted bugs.
+it says the tests miss 13 of 15 planted changes.
 
 ---
 
@@ -273,7 +277,7 @@ hours, and zero hours. I worked each expected amount out by hand, and each
 matches what the starter code returns. All 11 pass.
 
 The new tests check results, not just that code ran, and PIT shows the difference.
-With them added, it catches 13 of the 15 planted bugs in `PayrollCalculator`,
+With them added, it catches 13 of the 15 planted changes in `PayrollCalculator`,
 up from 2. The two it still misses aren't gaps in the tests:
 
 - Changing `hoursWorked > 40` to `hoursWorked >= 40` makes no difference to any
