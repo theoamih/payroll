@@ -198,9 +198,12 @@ an assumption to confirm rather than a defect, and left it as it is.
 ### What I checked and didn't find
 
 I looked for Liskov Substitution and Interface Segregation problems too and
-didn't find any. There's no inheritance in the code, and `EmployeeRepository` has
-a single method. I'd rather say that than stretch the list to cover all five
-SOLID principles.
+didn't find any. The only subtype is `InMemoryEmployeeRepository`, which
+implements `EmployeeRepository`, and the interface promises nothing beyond its
+method signature, so there's no contract for the implementation to break. The
+real problem there is the undocumented `null`, which is C2. `EmployeeRepository`
+also has a single method, so no class is forced to depend on methods it doesn't
+use. I'd rather say that than stretch the list to cover all five SOLID principles.
 
 ---
 
