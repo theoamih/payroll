@@ -310,11 +310,15 @@ by switching it off in a throwaway copy and confirming that its test fails.
 
 ### Before and after
 
+Both columns measure the whole project. The starter's figures for `PayrollCalculator`
+alone, which [ANALYSIS.md](ANALYSIS.md) uses, are shown in brackets.
+
 | Measure | Starter | Now |
 |---|---|---|
 | Tests | 3 | 175 |
-| JaCoCo line coverage | 10 of 16 lines in `PayrollCalculator` | 182 of 198 lines, and all 16 missed lines are in `Demo`. 48 of 48 branches |
-| PIT mutants killed | 2 of 15 | 66 of 75 |
+| JaCoCo line coverage | 21 of 34 lines (10 of 16 in `PayrollCalculator`) | 182 of 198 lines, and all 16 missed lines are in `Demo` |
+| JaCoCo branch coverage | 2 of 6 | 48 of 48 |
+| PIT mutants killed | 3 of 21 (2 of 15 in `PayrollCalculator`) | 66 of 75 |
 
 Of the 9 mutants PIT does not kill:
 
