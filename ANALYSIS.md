@@ -23,12 +23,16 @@ tax subtraction, and reran the tests after each one. The tests failed for 2 of t
 The demo also prints `0.0` for an employee who doesn't exist, which the README
 asks you to look at. That turned out to be the most important clue.
 
-To reproduce:
+Everything in Parts 1 and 2 was observed on the starter code, which is the first
+commit in this repository (`8c41eba`, "Add starter code as received"). The code
+has changed since, so to reproduce these results, check that commit out first:
 
 ```bash
+git checkout 8c41eba
 mvn compile exec:java -Dexec.mainClass=com.rosewood.payroll.Demo
 mvn verify                                                   # tests + JaCoCo
 mvn test-compile org.pitest:pitest-maven:mutationCoverage    # PIT
+git switch -                                                 # back to where you were
 ```
 
 ---
