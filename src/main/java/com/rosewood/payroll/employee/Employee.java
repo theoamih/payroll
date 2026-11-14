@@ -1,4 +1,4 @@
-package com.rosewood.payroll;
+package com.rosewood.payroll.employee;
 
 public class Employee {
     private final String id;

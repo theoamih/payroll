@@ -1,4 +1,6 @@
-package com.rosewood.payroll;
+package com.rosewood.payroll.employee;
+
+import com.rosewood.payroll.PayrollException;
 
 import java.io.Serial;
 

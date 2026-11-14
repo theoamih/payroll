@@ -21,7 +21,7 @@ You need JDK 21 and Maven.
 
 ```bash
 mvn compile
-mvn exec:java -Dexec.mainClass=com.rosewood.payroll.Demo
+mvn exec:java -Dexec.mainClass=com.rosewood.payroll.app.Demo
 ```
 
 **Run the existing tests:**

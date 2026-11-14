@@ -1,4 +1,4 @@
-package com.rosewood.payroll;
+package com.rosewood.payroll.employee;
 
 import java.util.Collection;
 import java.util.HashMap;

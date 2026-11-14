@@ -1,4 +1,9 @@
-package com.rosewood.payroll;
+package com.rosewood.payroll.netpay;
+
+import com.rosewood.payroll.PayrollException;
+import com.rosewood.payroll.employee.Employee;
+import com.rosewood.payroll.employee.EmployeeRepository;
+import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
 
 import org.junit.jupiter.api.Test;
 

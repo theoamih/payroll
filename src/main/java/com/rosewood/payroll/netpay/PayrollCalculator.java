@@ -1,4 +1,8 @@
-package com.rosewood.payroll;
+package com.rosewood.payroll.netpay;
+
+import com.rosewood.payroll.employee.Employee;
+import com.rosewood.payroll.employee.EmployeeNotFoundException;
+import com.rosewood.payroll.employee.EmployeeRepository;
 
 import java.util.Objects;
 
