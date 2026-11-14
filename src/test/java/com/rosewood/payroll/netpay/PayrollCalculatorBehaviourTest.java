@@ -23,10 +23,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests the net pay that PayrollCalculator actually returns, written before any
- * production code was changed. The expected amounts were worked out by hand and
- * match what the starter code returns, so these tests protect the pay rules
- * during the refactor.
+ * Specifies the net pay PayrollCalculator must produce and the failures it must report.
+ *
+ * <p>The expected amounts were worked out by hand, so they show the pay rules
+ * independently of the code, and they protect those rules while the code is refactored.
+ *
+ * <p>Tests tagged {@code known-defect} describe behaviour the code does not have yet,
+ * so they fail. The tag keeps them out of the default build, and they can be run on
+ * their own with {@code mvn test -Pknown-defects}. The tag is removed when the defect is
+ * fixed. C1 to C4 refer to the problems described in ANALYSIS.md.
  */
 class PayrollCalculatorBehaviourTest {
 
@@ -66,8 +71,10 @@ class PayrollCalculatorBehaviourTest {
         })
         void taxesGrossPayAtTheRateOfItsBand(double hours, double rate, String band, double expectedNet)
                 throws PayrollException {
-            assertEquals(expectedNet, calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate),
-                    FLOATING_POINT_TOLERANCE);
+
+            double net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
+
+            assertEquals(expectedNet, net, FLOATING_POINT_TOLERANCE);
         }
     }
 
@@ -83,35 +90,39 @@ class PayrollCalculatorBehaviourTest {
         })
         void paysHoursOverFortyAtTimeAndAHalf(double hours, double rate, String rule, double expectedNet)
                 throws PayrollException {
-            assertEquals(expectedNet, calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate),
-                    FLOATING_POINT_TOLERANCE);
+
+            double net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
+
+            assertEquals(expectedNet, net, FLOATING_POINT_TOLERANCE);
         }
     }
 
+    // Zero is a real answer for someone who did not work, so it must stay distinct from
+    // the failures below, which the starter code also reported as zero.
     @Test
     void paysNothingForZeroHoursWorked() throws PayrollException {
-        assertEquals(0.0, calculator.calculateNetPay(KNOWN_EMPLOYEE, 0, 20), FLOATING_POINT_TOLERANCE);
-    }
+        double net = calculator.calculateNetPay(KNOWN_EMPLOYEE, 0, 20);
 
-    // Tests tagged known-defect describe behaviour the code does not have yet, so they fail.
-    // The tag keeps them out of the default build (run them with: mvn test -Pknown-defects)
-    // and is removed when the defect is fixed. C1 to C4 refer to the problems in ANALYSIS.md.
+        assertEquals(0.0, net, FLOATING_POINT_TOLERANCE);
+    }
 
     @Nested
     class MissingEmployee {
 
-        // C2: fixed. The starter code returned 0.0 here.
+        // C2: pay must never be worked out for someone with no employee record, and the
+        // caller needs the id to report which record is missing.
         @Test
         void rejectsAnEmployeeWhoDoesNotExist() {
             EmployeeNotFoundException error = assertThrows(EmployeeNotFoundException.class,
                     () -> calculator.calculateNetPay("unknown", 40, 20),
                     "an employee who does not exist must be rejected, not paid");
+
             assertEquals("unknown", error.getEmployeeId());
             assertEquals("No employee found with id 'unknown'", error.getMessage());
         }
 
-        // C2: fixed. The starter code returned 0.0 here. A null id is a mistake in the
-        // calling code, not a missing record, so it is a NullPointerException.
+        // C2: a null id is a mistake in the calling code, not a missing record, so it is
+        // reported as a NullPointerException rather than as EmployeeNotFoundException.
         @Test
         void rejectsAMissingEmployeeId() {
             assertThrows(NullPointerException.class, () -> calculator.calculateNetPay(null, 40, 20),
@@ -122,9 +133,8 @@ class PayrollCalculatorBehaviourTest {
     @Nested
     class FailingRepository {
 
-        // C1: the starter code caught every exception and returned 0, so a broken
-        // employee store would have looked like a valid payslip. This guards against a
-        // catch-all ever being put back around the lookup.
+        // C1: a catch-all would turn a broken employee store into a payslip that looks
+        // valid. This guards against one ever being put back around the lookup.
         @Test
         void letsALookupFailureReachTheCallerInsteadOfPayingZero() {
             IllegalStateException failure = new IllegalStateException("employee store unavailable");
@@ -146,7 +156,7 @@ class PayrollCalculatorBehaviourTest {
     @Nested
     class InvalidInput {
 
-        // C3
+        // C3: negative hours would produce negative pay.
         @Test
         @Tag(KNOWN_DEFECT)
         void rejectsNegativeHours() {
@@ -154,7 +164,7 @@ class PayrollCalculatorBehaviourTest {
                     "negative hours must be rejected");
         }
 
-        // C3
+        // C3: a negative rate would produce negative pay.
         @Test
         @Tag(KNOWN_DEFECT)
         void rejectsANegativeRate() {
@@ -162,7 +172,7 @@ class PayrollCalculatorBehaviourTest {
                     "a negative hourly rate must be rejected");
         }
 
-        // C3
+        // C3: hours that are not a number would produce pay that is not a number.
         @Test
         @Tag(KNOWN_DEFECT)
         void rejectsHoursThatAreNotANumber() {
@@ -170,7 +180,7 @@ class PayrollCalculatorBehaviourTest {
                     "hours that are not a number must be rejected");
         }
 
-        // C3
+        // C3: infinite hours would produce pay that is not a number.
         @Test
         @Tag(KNOWN_DEFECT)
         void rejectsInfiniteHours() {
@@ -183,8 +193,8 @@ class PayrollCalculatorBehaviourTest {
     @Nested
     class Rounding {
 
-        // C4. The exact amount depends on the rounding rule, which has not been chosen yet,
-        // so this checks only that the result is a whole number of pesewas.
+        // C4: a payslip can only show whole pesewas. The exact amount depends on the
+        // rounding rule, which has not been chosen yet, so this checks only the precision.
         @ParameterizedTest(name = "{0}h at {1}")
         @Tag(KNOWN_DEFECT)
         @CsvSource({
@@ -193,7 +203,9 @@ class PayrollCalculatorBehaviourTest {
         })
         void paysAnAmountInWholePesewas(double hours, double rate) throws PayrollException {
             double net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
+
             int decimalPlaces = BigDecimal.valueOf(net).stripTrailingZeros().scale();
+
             assertTrue(decimalPlaces <= 2, () -> "net pay must be a whole number of pesewas, but was " + net);
         }
     }

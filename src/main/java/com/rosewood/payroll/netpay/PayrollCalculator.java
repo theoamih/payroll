@@ -6,10 +6,17 @@ import com.rosewood.payroll.employee.EmployeeRepository;
 
 import java.util.Objects;
 
+/**
+ * Works out an employee's net pay from the hours they worked and their hourly rate.
+ */
 public class PayrollCalculator {
 
     private final EmployeeRepository repository;
 
+    /**
+     * @param repository where employee records are looked up
+     * @throws NullPointerException if repository is null
+     */
     public PayrollCalculator(EmployeeRepository repository) {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
     }
@@ -17,12 +24,18 @@ public class PayrollCalculator {
     /**
      * Works out an employee's net pay for the hours worked.
      *
+     * @param employeeId  the employee being paid
+     * @param hoursWorked the hours worked in the pay period
+     * @param hourlyRate  the pay for one ordinary hour
+     * @return the net pay, after tax
      * @throws EmployeeNotFoundException if no employee has the given id
-     * @throws NullPointerException if employeeId is null
+     * @throws NullPointerException      if employeeId is null
      */
     public double calculateNetPay(String employeeId, double hoursWorked, double hourlyRate)
             throws EmployeeNotFoundException {
+
         Objects.requireNonNull(employeeId, "employeeId must not be null");
+
         // Checked before any pay is worked out, so pay is never calculated for someone
         // who is not on record.
         Employee employee = repository.findById(employeeId)

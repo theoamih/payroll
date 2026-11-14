@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class InMemoryEmployeeRepositoryTest {
 
     private final Employee efua = new Employee("e1", "Efua Sarpong");
+
     private final Employee kwame = new Employee("e2", "Kwame Owusu");
 
     @Test
@@ -23,7 +24,8 @@ class InMemoryEmployeeRepositoryTest {
         assertSame(kwame, repository.findById("e2").orElseThrow());
     }
 
-    // C2: an unknown id is reported as an empty Optional, not null.
+    // C2: an empty Optional makes "not found" part of the method's type, so a caller
+    // cannot forget to handle it the way the starter code forgot to check for null.
     @Test
     void reportsAnUnknownIdAsEmpty() {
         InMemoryEmployeeRepository repository = new InMemoryEmployeeRepository(List.of(efua));
@@ -31,7 +33,8 @@ class InMemoryEmployeeRepositoryTest {
         assertEquals(Optional.empty(), repository.findById("unknown"));
     }
 
-    // C10: the repository used to create e1 and e2 itself. It now holds only what it is given.
+    // C10: a repository that quietly contains employees of its own lets tests pass
+    // because of data they cannot see. It must hold only what it is given.
     @Test
     void holdsNoEmployeesItWasNotGiven() {
         InMemoryEmployeeRepository repository = new InMemoryEmployeeRepository(List.of());
@@ -45,6 +48,7 @@ class InMemoryEmployeeRepositoryTest {
 
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> new InMemoryEmployeeRepository(List.of(efua, anotherE1)));
+
         assertEquals("duplicate employee id: e1", error.getMessage());
     }
 
@@ -56,7 +60,8 @@ class InMemoryEmployeeRepositoryTest {
     @Test
     void refusesAMissingEmployeeInTheList() {
         // List.of does not allow null, so Arrays.asList is used to build a list containing one.
-        assertThrows(NullPointerException.class,
-                () -> new InMemoryEmployeeRepository(Arrays.asList(efua, null)));
+        List<Employee> employeesWithANull = Arrays.asList(efua, null);
+
+        assertThrows(NullPointerException.class, () -> new InMemoryEmployeeRepository(employeesWithANull));
     }
 }

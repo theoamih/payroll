@@ -10,8 +10,9 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class PayrollCalculatorTest {
 
@@ -23,7 +24,9 @@ class PayrollCalculatorTest {
     void calculatesNetPay() throws PayrollException {
         PayrollCalculator calculator = new PayrollCalculator(
                 new InMemoryEmployeeRepository(List.of(new Employee("e1", "Efua Sarpong"))));
+
         double net = calculator.calculateNetPay("e1", 40, 20);
+
         // 40 h at 20 is a gross of 800, in the LOW band (5%): 800 - 40 = 760
         assertEquals(760.0, net, FLOATING_POINT_TOLERANCE);
     }
@@ -33,6 +36,7 @@ class PayrollCalculatorTest {
         // Mock the dependency, not the class under test, so the real pay calculation runs.
         EmployeeRepository repository = mock(EmployeeRepository.class);
         when(repository.findById("e2")).thenReturn(Optional.of(new Employee("e2", "Kwame Owusu")));
+
         PayrollCalculator calculator = new PayrollCalculator(repository);
 
         double net = calculator.calculateNetPay("e2", 50, 30);
@@ -46,7 +50,9 @@ class PayrollCalculatorTest {
     void returnsPayForAnEmployee() throws PayrollException {
         PayrollCalculator calculator = new PayrollCalculator(
                 new InMemoryEmployeeRepository(List.of(new Employee("e1", "Efua Sarpong"))));
+
         double net = calculator.calculateNetPay("e1", 35, 25);
+
         // 35 h at 25 is a gross of 875, in the LOW band (5%): 875 - 43.75 = 831.25
         assertEquals(831.25, net, FLOATING_POINT_TOLERANCE);
     }
