@@ -50,15 +50,19 @@ public record Money(BigDecimal amount) {
     }
 
     /**
+     * Takes another amount away from this one. No rounding is needed, because both
+     * amounts are already whole pesewas.
+     *
      * @param other the amount to take away
-     * @return this amount minus the other, which needs no rounding because both are
-     *         already whole pesewas
+     * @return this amount minus the other
      */
     public Money minus(Money other) {
         return new Money(amount.subtract(other.amount));
     }
 
     /**
+     * Compares this amount with another by value.
+     *
      * @param other the amount to compare with
      * @return true if this amount is smaller than the other
      */
@@ -67,7 +71,9 @@ public record Money(BigDecimal amount) {
     }
 
     /**
-     * @return the amount as it would appear on a payslip, for example "GHS 760.00"
+     * Formats the amount as it would appear on a payslip.
+     *
+     * @return the amount with its currency, for example "GHS 760.00"
      */
     @Override
     public String toString() {

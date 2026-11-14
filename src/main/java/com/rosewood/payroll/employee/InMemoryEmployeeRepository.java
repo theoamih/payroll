@@ -17,6 +17,8 @@ public class InMemoryEmployeeRepository implements EmployeeRepository {
     private final Map<String, Employee> employees = new HashMap<>();
 
     /**
+     * Creates a store holding exactly the given employees.
+     *
      * @param employees the employees to hold
      * @throws NullPointerException     if the collection, or any employee in it, is null
      * @throws IllegalArgumentException if two employees share an id

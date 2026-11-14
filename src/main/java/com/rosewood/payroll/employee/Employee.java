@@ -10,6 +10,8 @@ public class Employee {
     private final String name;
 
     /**
+     * Creates an employee record.
+     *
      * @param id   the identifier used to look the employee up
      * @param name the employee's name as it appears on a payslip
      */
@@ -19,14 +21,18 @@ public class Employee {
     }
 
     /**
-     * @return the identifier used to look the employee up
+     * Returns the identifier used to look the employee up.
+     *
+     * @return the employee's id
      */
     public String getId() {
         return id;
     }
 
     /**
-     * @return the employee's name as it appears on a payslip
+     * Returns the employee's name as it appears on a payslip.
+     *
+     * @return the employee's name
      */
     public String getName() {
         return name;

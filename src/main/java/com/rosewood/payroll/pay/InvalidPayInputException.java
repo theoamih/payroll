@@ -18,11 +18,15 @@ public class InvalidPayInputException extends PayrollException {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    /** The name of the input that was rejected. */
     private final String field;
 
+    /** The value that was rejected. */
     private final BigDecimal rejectedValue;
 
     /**
+     * Creates the exception for one rejected input.
+     *
      * @param field         the name of the input that was rejected
      * @param rejectedValue the value that was rejected
      * @param requirement   what a valid value must be, completing the sentence
@@ -45,7 +49,9 @@ public class InvalidPayInputException extends PayrollException {
     }
 
     /**
-     * @return the value that was rejected
+     * Returns the value that was rejected.
+     *
+     * @return the rejected value
      */
     public BigDecimal getRejectedValue() {
         return rejectedValue;

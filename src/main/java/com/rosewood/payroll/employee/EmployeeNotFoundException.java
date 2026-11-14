@@ -12,9 +12,12 @@ public class EmployeeNotFoundException extends PayrollException {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    /** The id that was looked up and not found. */
     private final String employeeId;
 
     /**
+     * Creates the exception for an id that has no employee record.
+     *
      * @param employeeId the id that was looked up and not found
      */
     public EmployeeNotFoundException(String employeeId) {

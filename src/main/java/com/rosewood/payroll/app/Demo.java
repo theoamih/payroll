@@ -20,6 +20,12 @@ import java.util.List;
 public class Demo {
 
     /**
+     * Not meant to be created. The demo is run through {@link #main(String[])}.
+     */
+    private Demo() {
+    }
+
+    /**
      * Prints net pay for two known employees, then shows how an unknown employee and
      * invalid hours are refused.
      *

@@ -17,6 +17,8 @@ public class PayrollCalculator {
     private final EmployeeRepository repository;
 
     /**
+     * Creates a calculator that looks employees up in the given store.
+     *
      * @param repository where employee records are looked up
      * @throws NullPointerException if repository is null
      */
@@ -89,6 +91,9 @@ public class PayrollCalculator {
     /**
      * Zero hours is allowed, because an employee may not have worked in the period.
      * Negative hours are not, because they would produce negative pay.
+     *
+     * @param hoursWorked the hours to check
+     * @throws InvalidPayInputException if the hours are negative
      */
     private static void validateHoursWorked(BigDecimal hoursWorked) throws InvalidPayInputException {
         if (hoursWorked.signum() < 0) {
@@ -101,6 +106,9 @@ public class PayrollCalculator {
      * GHS 0 an hour, so a zero rate is almost certainly a data-entry mistake, and
      * paying 0 without complaint is exactly the kind of believable wrong payslip
      * this service must not produce.
+     *
+     * @param hourlyRate the rate to check
+     * @throws InvalidPayInputException if the rate is zero or negative
      */
     private static void validateHourlyRate(BigDecimal hourlyRate) throws InvalidPayInputException {
         if (hourlyRate.signum() <= 0) {

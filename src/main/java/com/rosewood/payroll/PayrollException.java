@@ -16,6 +16,8 @@ public abstract class PayrollException extends Exception {
     private static final long serialVersionUID = 1L;
 
     /**
+     * Creates the exception with a description of what went wrong.
+     *
      * @param message a description of the failure that is safe to show to the person
      *                running payroll
      */
