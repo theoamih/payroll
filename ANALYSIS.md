@@ -295,7 +295,7 @@ them out and stays green. All of these defects have since been fixed, so to see 
 tests fail, check out the code as it was when they were written:
 
 ```bash
-git checkout analysis-complete
+git checkout a75d9dc
 mvn test -Pknown-defects
 git switch -                                                 # back to where you were
 ```
@@ -331,6 +331,6 @@ are not a number or are infinite were removed when hours and rate became
 all. Once no tagged tests were left, the `known-defects` build profile was removed
 too.
 
-The code as it was when these results were recorded is tagged `analysis-complete`
-in git. Checking out that tag and running `mvn test -Pknown-defects` shows every
-failure above.
+The code as it was when these results were recorded is commit `a75d9dc` ("Add test
+results confirming the analysis findings"). Checking out that commit and running
+`mvn test -Pknown-defects` shows every failure above.

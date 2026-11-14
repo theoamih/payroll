@@ -154,7 +154,7 @@ subject names the IDs it fixes, so `git log --oneline --grep=C6` shows the commi
 | Feature packages | Layer packages (`model`, `service`, `repository`) | A change to tax stays in one package |
 | Printing in `PayslipPrinter`, with its output streams passed in | Printing inside the calculator | The calculator only calculates, and tests can capture and check the exact printed text |
 | Keep the original AI test file and fix it in place | Deleting it | The history shows each hollow test and how it was fixed |
-| Write tests that confirm the defects before changing code | Fixing straight away | The findings in [ANALYSIS.md](ANALYSIS.md) are backed by tests anyone can rerun. The code as it was then is tagged `analysis-complete` |
+| Write tests that confirm the defects before changing code | Fixing straight away | The findings in [ANALYSIS.md](ANALYSIS.md) are backed by tests anyone can rerun. The code as it was then is commit `a75d9dc` |
 
 ## Adding the new tax band
 
