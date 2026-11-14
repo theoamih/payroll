@@ -5,14 +5,13 @@ import com.rosewood.payroll.employee.Employee;
 import com.rosewood.payroll.employee.EmployeeNotFoundException;
 import com.rosewood.payroll.employee.EmployeeRepository;
 import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
+import com.rosewood.payroll.money.Money;
 import com.rosewood.payroll.pay.InvalidPayInputException;
 
 import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,7 +19,6 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -38,16 +36,18 @@ import static org.mockito.Mockito.when;
  */
 class PayrollCalculatorBehaviourTest {
 
-    // Pay is still a double at this stage, so amounts are compared with a tolerance
-    // that only absorbs floating-point noise. It is far smaller than one pesewa.
-    private static final double FLOATING_POINT_TOLERANCE = 1e-9;
-
     private static final String KNOWN_EMPLOYEE = "e1";
 
-    private static final String KNOWN_DEFECT = "known-defect";
+    private static final BigDecimal FORTY_HOURS = new BigDecimal("40");
+
+    private static final BigDecimal RATE_OF_TWENTY = new BigDecimal("20");
 
     private final PayrollCalculator calculator = new PayrollCalculator(
             new InMemoryEmployeeRepository(List.of(new Employee(KNOWN_EMPLOYEE, "Efua Sarpong"))));
+
+    private static Money money(String amount) {
+        return new Money(new BigDecimal(amount));
+    }
 
     @Nested
     class Construction {
@@ -72,12 +72,12 @@ class PayrollCalculatorBehaviourTest {
                 "40, 125,     HIGH band starts at 5000,     3750.00",
                 "40, 200,     HIGH band,                    6000.00",
         })
-        void taxesGrossPayAtTheRateOfItsBand(double hours, double rate, String band, double expectedNet)
+        void taxesGrossPayAtTheRateOfItsBand(BigDecimal hours, BigDecimal rate, String band, String expectedNet)
                 throws PayrollException {
 
-            double net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
+            Money net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
 
-            assertEquals(expectedNet, net, FLOATING_POINT_TOLERANCE);
+            assertEquals(money(expectedNet), net);
         }
     }
 
@@ -91,12 +91,12 @@ class PayrollCalculatorBehaviourTest {
                 "41,   20, one hour over 40 is paid at time-and-a-half,     788.50",
                 "50,   30, ten hours over 40 are paid at time-and-a-half,   1402.50",
         })
-        void paysHoursOverFortyAtTimeAndAHalf(double hours, double rate, String rule, double expectedNet)
+        void paysHoursOverFortyAtTimeAndAHalf(BigDecimal hours, BigDecimal rate, String rule, String expectedNet)
                 throws PayrollException {
 
-            double net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
+            Money net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
 
-            assertEquals(expectedNet, net, FLOATING_POINT_TOLERANCE);
+            assertEquals(money(expectedNet), net);
         }
     }
 
@@ -104,9 +104,9 @@ class PayrollCalculatorBehaviourTest {
     // the failures below, which the starter code also reported as zero.
     @Test
     void paysNothingForZeroHoursWorked() throws PayrollException {
-        double net = calculator.calculateNetPay(KNOWN_EMPLOYEE, 0, 20);
+        Money net = calculator.calculateNetPay(KNOWN_EMPLOYEE, BigDecimal.ZERO, RATE_OF_TWENTY);
 
-        assertEquals(0.0, net, FLOATING_POINT_TOLERANCE);
+        assertEquals(money("0.00"), net);
     }
 
     @Nested
@@ -117,7 +117,7 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsAnEmployeeWhoDoesNotExist() {
             EmployeeNotFoundException error = assertThrows(EmployeeNotFoundException.class,
-                    () -> calculator.calculateNetPay("unknown", 40, 20),
+                    () -> calculator.calculateNetPay("unknown", FORTY_HOURS, RATE_OF_TWENTY),
                     "an employee who does not exist must be rejected, not paid");
 
             assertEquals("unknown", error.getEmployeeId());
@@ -128,7 +128,8 @@ class PayrollCalculatorBehaviourTest {
         // reported as a NullPointerException rather than as EmployeeNotFoundException.
         @Test
         void rejectsAMissingEmployeeId() {
-            assertThrows(NullPointerException.class, () -> calculator.calculateNetPay(null, 40, 20),
+            assertThrows(NullPointerException.class,
+                    () -> calculator.calculateNetPay(null, FORTY_HOURS, RATE_OF_TWENTY),
                     "a missing employee id must be rejected, not paid");
         }
     }
@@ -148,7 +149,7 @@ class PayrollCalculatorBehaviourTest {
             PayrollCalculator calculatorWithFailingStore = new PayrollCalculator(repository);
 
             IllegalStateException thrown = assertThrows(IllegalStateException.class,
-                    () -> calculatorWithFailingStore.calculateNetPay(KNOWN_EMPLOYEE, 40, 20));
+                    () -> calculatorWithFailingStore.calculateNetPay(KNOWN_EMPLOYEE, FORTY_HOURS, RATE_OF_TWENTY));
 
             // The same exception object, not a replacement, so no detail about the
             // original failure is lost on the way to the caller.
@@ -164,12 +165,12 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsNegativeHours() {
             InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, -10, 20),
+                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, new BigDecimal("-10"), RATE_OF_TWENTY),
                     "negative hours must be rejected");
 
             assertEquals("hoursWorked", error.getField());
-            assertEquals(-10.0, error.getRejectedValue());
-            assertEquals("hoursWorked must be a finite number of zero or more, but was -10.0", error.getMessage());
+            assertEquals(new BigDecimal("-10"), error.getRejectedValue());
+            assertEquals("hoursWorked must be zero or more, but was -10", error.getMessage());
         }
 
         // C3: the smallest step below zero is refused too, so the check is "below zero",
@@ -177,27 +178,7 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsHoursJustBelowZero() {
             InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, -0.01, 20));
-
-            assertEquals("hoursWorked", error.getField());
-        }
-
-        // C3: hours that are not a number would produce pay that is not a number.
-        @Test
-        void rejectsHoursThatAreNotANumber() {
-            InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, Double.NaN, 20),
-                    "hours that are not a number must be rejected");
-
-            assertEquals("hoursWorked", error.getField());
-        }
-
-        // C3: infinite hours would produce pay that is not a number.
-        @Test
-        void rejectsInfiniteHours() {
-            InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, Double.POSITIVE_INFINITY, 20),
-                    "infinite hours must be rejected");
+                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, new BigDecimal("-0.01"), RATE_OF_TWENTY));
 
             assertEquals("hoursWorked", error.getField());
         }
@@ -206,12 +187,12 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsANegativeRate() {
             InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, 40, -20),
+                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, FORTY_HOURS, new BigDecimal("-20")),
                     "a negative hourly rate must be rejected");
 
             assertEquals("hourlyRate", error.getField());
-            assertEquals(-20.0, error.getRejectedValue());
-            assertEquals("hourlyRate must be a finite number greater than zero, but was -20.0", error.getMessage());
+            assertEquals(new BigDecimal("-20"), error.getRejectedValue());
+            assertEquals("hourlyRate must be greater than zero, but was -20", error.getMessage());
         }
 
         // A zero rate would quietly pay nothing for real work, which looks like a valid
@@ -219,18 +200,19 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsAZeroRate() {
             InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, 40, 0));
+                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, FORTY_HOURS, BigDecimal.ZERO));
 
             assertEquals("hourlyRate", error.getField());
         }
 
-        @ParameterizedTest(name = "rate {0}")
-        @ValueSource(doubles = {Double.NaN, Double.POSITIVE_INFINITY})
-        void rejectsARateThatIsNotAFiniteNumber(double rate) {
-            InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, 40, rate));
-
-            assertEquals("hourlyRate", error.getField());
+        // Missing hours or a missing rate is a mistake in the calling code, not bad
+        // timesheet data, so like a missing id it is a NullPointerException.
+        @Test
+        void rejectsMissingHoursOrRate() {
+            assertThrows(NullPointerException.class,
+                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, null, RATE_OF_TWENTY));
+            assertThrows(NullPointerException.class,
+                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, FORTY_HOURS, null));
         }
 
         // Invalid input is refused before the employee is looked up, so a payslip that
@@ -242,7 +224,7 @@ class PayrollCalculatorBehaviourTest {
             PayrollCalculator calculatorWithMockStore = new PayrollCalculator(repository);
 
             assertThrows(InvalidPayInputException.class,
-                    () -> calculatorWithMockStore.calculateNetPay(KNOWN_EMPLOYEE, -10, 20));
+                    () -> calculatorWithMockStore.calculateNetPay(KNOWN_EMPLOYEE, new BigDecimal("-10"), RATE_OF_TWENTY));
 
             verifyNoInteractions(repository);
         }
@@ -251,20 +233,31 @@ class PayrollCalculatorBehaviourTest {
     @Nested
     class Rounding {
 
-        // C4: a payslip can only show whole pesewas. The exact amount depends on the
-        // rounding rule, which has not been chosen yet, so this checks only the precision.
-        @ParameterizedTest(name = "{0}h at {1}")
-        @Tag(KNOWN_DEFECT)
+        // C4: a payslip can only show whole pesewas. Gross is rounded once and tax on its
+        // own, then net is gross minus tax.
+        //   41h at 0.10:    gross 4.10 + 0.05 overtime = 4.15, tax 0.2075 -> 0.21, net 3.94
+        //   37.5h at 13.33: gross 499.875 -> 499.88, tax 24.994 -> 24.99, net 474.89
+        @ParameterizedTest(name = "{0}h at {1} -> net {2}")
         @CsvSource({
-                "41,   0.10",
-                "37.5, 13.33",
+                "41,   0.10,  3.94",
+                "37.5, 13.33, 474.89",
         })
-        void paysAnAmountInWholePesewas(double hours, double rate) throws PayrollException {
-            double net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
+        void paysAnAmountInWholePesewas(BigDecimal hours, BigDecimal rate, String expectedNet)
+                throws PayrollException {
 
-            int decimalPlaces = BigDecimal.valueOf(net).stripTrailingZeros().scale();
+            Money net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
 
-            assertTrue(decimalPlaces <= 2, () -> "net pay must be a whole number of pesewas, but was " + net);
+            assertEquals(money(expectedNet), net);
+        }
+
+        // 1h at 0.10 gives a gross of 0.10 and tax of exactly half a pesewa (0.005).
+        // Rounding half up makes the tax 0.01, so net is 0.09. Banker's rounding would
+        // have made the tax 0.00, so this test pins the chosen rule.
+        @Test
+        void roundsHalfAPesewaOfTaxUp() throws PayrollException {
+            Money net = calculator.calculateNetPay(KNOWN_EMPLOYEE, BigDecimal.ONE, new BigDecimal("0.10"));
+
+            assertEquals(money("0.09"), net);
         }
     }
 }

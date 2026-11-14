@@ -4,8 +4,10 @@ import com.rosewood.payroll.PayrollException;
 import com.rosewood.payroll.employee.Employee;
 import com.rosewood.payroll.employee.EmployeeRepository;
 import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
+import com.rosewood.payroll.money.Money;
 import com.rosewood.payroll.netpay.PayrollCalculator;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -30,10 +32,10 @@ public class Demo {
 
         PayrollCalculator calculator = new PayrollCalculator(repository);
 
-        printNetPay(calculator, "Result e1, 40h @ 20    ", "e1", 40, 20);
-        printNetPay(calculator, "Result e2, 50h @ 30    ", "e2", 50, 30);
-        printNetPay(calculator, "Result unknown employee", "unknown", 40, 20);
-        printNetPay(calculator, "Result e1, -10h @ 20   ", "e1", -10, 20);
+        printNetPay(calculator, "Result e1, 40h @ 20    ", "e1", new BigDecimal("40"), new BigDecimal("20"));
+        printNetPay(calculator, "Result e2, 50h @ 30    ", "e2", new BigDecimal("50"), new BigDecimal("30"));
+        printNetPay(calculator, "Result unknown employee", "unknown", new BigDecimal("40"), new BigDecimal("20"));
+        printNetPay(calculator, "Result e1, -10h @ 20   ", "e1", new BigDecimal("-10"), new BigDecimal("20"));
     }
 
     /**
@@ -52,9 +54,9 @@ public class Demo {
      * @param rate       the pay for one ordinary hour
      */
     private static void printNetPay(PayrollCalculator calculator, String label,
-                                    String employeeId, double hours, double rate) {
+                                    String employeeId, BigDecimal hours, BigDecimal rate) {
         try {
-            double net = calculator.calculateNetPay(employeeId, hours, rate);
+            Money net = calculator.calculateNetPay(employeeId, hours, rate);
 
             System.out.println(label + " -> " + net);
         } catch (PayrollException e) {

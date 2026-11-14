@@ -3,8 +3,10 @@ package com.rosewood.payroll.netpay;
 import com.rosewood.payroll.employee.Employee;
 import com.rosewood.payroll.employee.EmployeeNotFoundException;
 import com.rosewood.payroll.employee.EmployeeRepository;
+import com.rosewood.payroll.money.Money;
 import com.rosewood.payroll.pay.InvalidPayInputException;
 
+import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
@@ -27,17 +29,19 @@ public class PayrollCalculator {
      *
      * @param employeeId  the employee being paid
      * @param hoursWorked the hours worked in the pay period
-     * @param hourlyRate  the pay for one ordinary hour
-     * @return the net pay, after tax
-     * @throws InvalidPayInputException  if hoursWorked is negative, or hourlyRate is not
-     *                                   above zero, or either is not a finite number
+     * @param hourlyRate  the pay for one ordinary hour, at any precision
+     * @return the net pay, after tax, in whole pesewas
+     * @throws InvalidPayInputException  if hoursWorked is negative or hourlyRate is not
+     *                                   above zero
      * @throws EmployeeNotFoundException if no employee has the given id
-     * @throws NullPointerException      if employeeId is null
+     * @throws NullPointerException      if any argument is null
      */
-    public double calculateNetPay(String employeeId, double hoursWorked, double hourlyRate)
+    public Money calculateNetPay(String employeeId, BigDecimal hoursWorked, BigDecimal hourlyRate)
             throws InvalidPayInputException, EmployeeNotFoundException {
 
         Objects.requireNonNull(employeeId, "employeeId must not be null");
+        Objects.requireNonNull(hoursWorked, "hoursWorked must not be null");
+        Objects.requireNonNull(hourlyRate, "hourlyRate must not be null");
 
         // Checked before the lookup, so a bad timesheet is reported as what it is and
         // the employee store is not touched for a payslip that cannot be produced.
@@ -49,36 +53,46 @@ public class PayrollCalculator {
         Employee employee = repository.findById(employeeId)
                 .orElseThrow(() -> new EmployeeNotFoundException(employeeId));
 
-        double gross = hoursWorked * hourlyRate;
+        BigDecimal unroundedGross = hoursWorked.multiply(hourlyRate);
 
         // overtime: extra hours beyond 40 are paid at time-and-a-half
-        if (hoursWorked > 40) {
-            gross = gross + (hoursWorked - 40) * hourlyRate * 0.5;
+        if (hoursWorked.compareTo(new BigDecimal("40")) > 0) {
+            BigDecimal overtimeHours = hoursWorked.subtract(new BigDecimal("40"));
+            BigDecimal overtimePremium = overtimeHours.multiply(hourlyRate).multiply(new BigDecimal("0.5"));
+
+            unroundedGross = unroundedGross.add(overtimePremium);
         }
+
+        // Rounded to pesewas once, after base pay and overtime are added together, so
+        // gross pay is never rounded twice.
+        Money gross = new Money(unroundedGross);
 
         // tax band, worked out from gross pay
-        double taxRate;
-        if (gross < 1000) {
-            taxRate = 0.05;      // LOW
-        } else if (gross < 5000) {
-            taxRate = 0.15;      // MEDIUM
+        BigDecimal taxRate;
+        if (gross.isLessThan(new Money(new BigDecimal("1000")))) {
+            taxRate = new BigDecimal("0.05");      // LOW
+        } else if (gross.isLessThan(new Money(new BigDecimal("5000")))) {
+            taxRate = new BigDecimal("0.15");      // MEDIUM
         } else {
-            taxRate = 0.25;      // HIGH
+            taxRate = new BigDecimal("0.25");      // HIGH
         }
 
-        double net = gross - (gross * taxRate);
-        System.out.println("Net pay for " + employee.getName() + ": GHS " + net);
+        // Tax is rounded to pesewas on its own and net is gross minus tax, so gross,
+        // tax and net on a payslip always add up exactly.
+        Money tax = gross.times(taxRate);
+        Money net = gross.minus(tax);
+
+        System.out.println("Net pay for " + employee.getName() + ": " + net);
         return net;
     }
 
     /**
      * Zero hours is allowed, because an employee may not have worked in the period.
-     * Negative hours, NaN and infinity are not: each would produce a payslip that
-     * cannot be right.
+     * Negative hours are not, because they would produce negative pay.
      */
-    private static void validateHoursWorked(double hoursWorked) throws InvalidPayInputException {
-        if (!Double.isFinite(hoursWorked) || hoursWorked < 0) {
-            throw new InvalidPayInputException("hoursWorked", hoursWorked, "a finite number of zero or more");
+    private static void validateHoursWorked(BigDecimal hoursWorked) throws InvalidPayInputException {
+        if (hoursWorked.signum() < 0) {
+            throw new InvalidPayInputException("hoursWorked", hoursWorked, "zero or more");
         }
     }
 
@@ -88,9 +102,9 @@ public class PayrollCalculator {
      * paying 0 without complaint is exactly the kind of believable wrong payslip
      * this service must not produce.
      */
-    private static void validateHourlyRate(double hourlyRate) throws InvalidPayInputException {
-        if (!Double.isFinite(hourlyRate) || hourlyRate <= 0) {
-            throw new InvalidPayInputException("hourlyRate", hourlyRate, "a finite number greater than zero");
+    private static void validateHourlyRate(BigDecimal hourlyRate) throws InvalidPayInputException {
+        if (hourlyRate.signum() <= 0) {
+            throw new InvalidPayInputException("hourlyRate", hourlyRate, "greater than zero");
         }
     }
 }

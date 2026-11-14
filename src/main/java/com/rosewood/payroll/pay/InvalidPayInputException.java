@@ -3,6 +3,7 @@ package com.rosewood.payroll.pay;
 import com.rosewood.payroll.PayrollException;
 
 import java.io.Serial;
+import java.math.BigDecimal;
 
 /**
  * Thrown when the hours worked or the hourly rate cannot produce a valid payslip,
@@ -19,7 +20,7 @@ public class InvalidPayInputException extends PayrollException {
 
     private final String field;
 
-    private final double rejectedValue;
+    private final BigDecimal rejectedValue;
 
     /**
      * @param field         the name of the input that was rejected
@@ -27,8 +28,8 @@ public class InvalidPayInputException extends PayrollException {
      * @param requirement   what a valid value must be, completing the sentence
      *                      "{field} must be ..."
      */
-    public InvalidPayInputException(String field, double rejectedValue, String requirement) {
-        super(field + " must be " + requirement + ", but was " + rejectedValue);
+    public InvalidPayInputException(String field, BigDecimal rejectedValue, String requirement) {
+        super(field + " must be " + requirement + ", but was " + rejectedValue.toPlainString());
         this.field = field;
         this.rejectedValue = rejectedValue;
     }
@@ -46,7 +47,7 @@ public class InvalidPayInputException extends PayrollException {
     /**
      * @return the value that was rejected
      */
-    public double getRejectedValue() {
+    public BigDecimal getRejectedValue() {
         return rejectedValue;
     }
 }
