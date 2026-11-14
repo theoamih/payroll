@@ -2,6 +2,8 @@ package com.rosewood.payroll;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -13,7 +15,8 @@ class PayrollCalculatorTest {
 
     @Test
     void calculatesNetPay() {
-        PayrollCalculator calculator = new PayrollCalculator(new InMemoryEmployeeRepository());
+        PayrollCalculator calculator = new PayrollCalculator(
+                new InMemoryEmployeeRepository(List.of(new Employee("e1", "Efua Sarpong"))));
         double net = calculator.calculateNetPay("e1", 40, 20);
         // 40 h at 20 is a gross of 800, in the LOW band (5%): 800 - 40 = 760
         assertEquals(760.0, net, FLOATING_POINT_TOLERANCE);
@@ -35,7 +38,8 @@ class PayrollCalculatorTest {
 
     @Test
     void returnsPayForAnEmployee() {
-        PayrollCalculator calculator = new PayrollCalculator(new InMemoryEmployeeRepository());
+        PayrollCalculator calculator = new PayrollCalculator(
+                new InMemoryEmployeeRepository(List.of(new Employee("e1", "Efua Sarpong"))));
         double net = calculator.calculateNetPay("e1", 35, 25);
         // 35 h at 25 is a gross of 875, in the LOW band (5%): 875 - 43.75 = 831.25
         assertEquals(831.25, net, FLOATING_POINT_TOLERANCE);

@@ -7,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,7 +29,8 @@ class PayrollCalculatorBehaviourTest {
 
     private static final String KNOWN_DEFECT = "known-defect";
 
-    private final PayrollCalculator calculator = new PayrollCalculator(new InMemoryEmployeeRepository());
+    private final PayrollCalculator calculator = new PayrollCalculator(
+            new InMemoryEmployeeRepository(List.of(new Employee(KNOWN_EMPLOYEE, "Efua Sarpong"))));
 
     @Nested
     class Construction {
