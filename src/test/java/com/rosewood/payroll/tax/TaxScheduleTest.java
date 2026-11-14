@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -30,6 +31,20 @@ class TaxScheduleTest {
 
     private static TaxBand openBand(String name, String lowerBound) {
         return FlatRateTaxBand.startingAt(name, money(lowerBound), TEN_PERCENT);
+    }
+
+    /**
+     * A band that declares whatever range it is given, with no checks of its own, like a
+     * new TaxBand implementation might. FlatRateTaxBand cannot be used for this, because
+     * it refuses a range that does not end above where it starts.
+     */
+    private record UncheckedRangeTaxBand(String name, Money lowerBound, Optional<Money> upperBound)
+            implements TaxBand {
+
+        @Override
+        public Money taxOn(Money grossPay) {
+            return money("0");
+        }
     }
 
     @Nested
@@ -149,6 +164,27 @@ class TaxScheduleTest {
             List<TaxBand> bands = List.of(band("LOW", "0", "1000"), openBand("ALSO LOW", "0"));
 
             assertThrows(InvalidTaxScheduleException.class, () -> new TaxSchedule(bands));
+        }
+
+        // A band from 1000 up to 1000 covers nothing. Placed between two bands that meet at
+        // 1000, it touches both neighbours exactly, so without a check of its own it would
+        // be accepted and silently never apply. It is refused in either order.
+        @Test
+        void refusesABandThatDoesNotEndAboveWhereItStarts() {
+            TaxBand empty = new UncheckedRangeTaxBand("EMPTY", money("1000"), Optional.of(money("1000")));
+            TaxBand low = band("LOW", "0", "1000");
+            TaxBand high = openBand("HIGH", "1000");
+
+            InvalidTaxScheduleException emptyListedFirst = assertThrows(InvalidTaxScheduleException.class,
+                    () -> new TaxSchedule(List.of(low, empty, high)));
+            InvalidTaxScheduleException emptyListedLast = assertThrows(InvalidTaxScheduleException.class,
+                    () -> new TaxSchedule(List.of(low, high, empty)));
+
+            String expected = "invalid tax schedule: band EMPTY must end above where it starts,"
+                    + " but starts at GHS 1000.00 and ends at GHS 1000.00";
+
+            assertEquals(expected, emptyListedFirst.getMessage());
+            assertEquals(expected, emptyListedLast.getMessage());
         }
 
         @Test

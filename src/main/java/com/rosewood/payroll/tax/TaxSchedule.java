@@ -28,9 +28,10 @@ public class TaxSchedule {
      *
      * @param bands the bands, in any order
      * @throws NullPointerException         if the list, or any band in it, is null
-     * @throws InvalidTaxScheduleException if the bands do not start at zero, leave a gap,
-     *                                      overlap, or do not end with one band that has
-     *                                      no upper limit
+     * @throws InvalidTaxScheduleException if a band does not end above where it starts,
+     *                                      or if the bands do not start at zero, leave a
+     *                                      gap, overlap, or do not end with one band that
+     *                                      has no upper limit
      */
     public TaxSchedule(List<TaxBand> bands) {
         // List.copyOf refuses null bands, and working from a copy stops later changes to
@@ -75,8 +76,9 @@ public class TaxSchedule {
     }
 
     /**
-     * Checks that the bands, lowest first, run from zero with each band ending exactly
-     * where the next begins, and that only the last band is open-ended.
+     * Checks that every band ends above where it starts, that the bands, lowest first,
+     * run from zero with each band ending exactly where the next begins, and that only
+     * the last band is open-ended.
      *
      * @param ordered the bands, ordered by lower bound
      * @throws InvalidTaxScheduleException if they do not fit together
@@ -84,6 +86,13 @@ public class TaxSchedule {
     private static void checkTheBandsCoverAllGrossPayFromZero(List<TaxBand> ordered) {
         if (ordered.isEmpty()) {
             throw new InvalidTaxScheduleException("there must be at least one band");
+        }
+
+        // Each band is checked on its own first. FlatRateTaxBand already refuses an empty
+        // range, but other TaxBand implementations might not, and a band from 1000 up to
+        // 1000 would otherwise fit between its neighbours and silently never apply.
+        for (TaxBand band : ordered) {
+            checkBandEndsAboveWhereItStarts(band);
         }
 
         TaxBand lowest = ordered.get(0);
@@ -103,6 +112,15 @@ public class TaxSchedule {
         if (highestEnd.isPresent()) {
             throw new InvalidTaxScheduleException("the highest band, " + highest.name()
                     + ", must have no upper limit, but ends at " + highestEnd.get());
+        }
+    }
+
+    private static void checkBandEndsAboveWhereItStarts(TaxBand band) {
+        Optional<Money> end = band.upperBound();
+
+        if (end.isPresent() && !band.lowerBound().isLessThan(end.get())) {
+            throw new InvalidTaxScheduleException("band " + band.name() + " must end above where it starts,"
+                    + " but starts at " + band.lowerBound() + " and ends at " + end.get());
         }
     }
 
