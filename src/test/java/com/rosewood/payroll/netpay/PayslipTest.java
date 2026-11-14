@@ -38,6 +38,34 @@ class PayslipTest {
         assertEquals("net pay GHS 760.01 must equal gross pay GHS 800.00 minus tax GHS 40.00", error.getMessage());
     }
 
+    // Each refused payslip below adds up, so the tax check is the only reason it is
+    // refused.
+    @Test
+    void refusesNegativeTax() {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> new Payslip(efua, money("800.00"), "LOW", money("-0.01"), money("800.01")));
+
+        assertEquals("tax GHS -0.01 must not be negative", error.getMessage());
+    }
+
+    @Test
+    void refusesTaxOfMoreThanTheGrossPay() {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> new Payslip(efua, money("800.00"), "LOW", money("800.01"), money("-0.01")));
+
+        assertEquals("tax GHS 800.01 must not be more than gross pay GHS 800.00", error.getMessage());
+    }
+
+    // The two edges are allowed, because a band may have a rate of 0 or of 1.
+    @Test
+    void acceptsNoTaxAndTaxOfAllTheGrossPay() {
+        Payslip noTax = new Payslip(efua, money("800.00"), "NONE", money("0.00"), money("800.00"));
+        Payslip allTaxed = new Payslip(efua, money("800.00"), "ALL", money("800.00"), money("0.00"));
+
+        assertEquals(money("800.00"), noTax.netPay());
+        assertEquals(money("0.00"), allTaxed.netPay());
+    }
+
     @Test
     void refusesAMissingLine() {
         Money gross = money("800.00");

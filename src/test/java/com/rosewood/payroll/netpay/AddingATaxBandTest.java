@@ -155,4 +155,22 @@ class AddingATaxBandTest {
         assertEquals("invalid tax schedule: band HIGH has no upper limit, so band VERY HIGH can never apply",
                 error.getMessage());
     }
+
+    // A new band's rule can be wrong in a way the schedule cannot see when it starts,
+    // because the schedule checks ranges, not amounts. Here a band takes a fixed 100
+    // from everyone, which is more than a gross of 40. The payslip refuses to be
+    // created, so the mistake stops the run instead of paying someone -60.
+    @Test
+    void refusesToProduceAPayslipIfANewBandTakesMoreThanTheGrossPay() {
+        TaxBand fixedFeeForEveryone = new FixedPlusPercentageTaxBand(
+                "FIXED FEE", money("0"), money("100"), BigDecimal.ZERO);
+
+        PayrollCalculator calculator = calculatorWith(new TaxSchedule(List.of(fixedFeeForEveryone)));
+        HourlyRate rateOfOne = new HourlyRate(BigDecimal.ONE);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> calculator.calculatePayslip(EMPLOYEE, FORTY_HOURS, rateOfOne));
+
+        assertEquals("tax GHS 100.00 must not be more than gross pay GHS 40.00", error.getMessage());
+    }
 }
