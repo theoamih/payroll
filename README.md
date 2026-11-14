@@ -25,9 +25,9 @@ macOS and Linux.
 
 | Command | What it does | Result on the current code |
 |---|---|---|
-| `mvn clean verify` | Compiles, runs every test, and writes the JaCoCo coverage report to `target/site/jacoco/index.html` | 176 tests, 0 failures, `BUILD SUCCESS` |
+| `mvn clean verify` | Compiles, runs every test, and writes the JaCoCo coverage report to `target/site/jacoco/index.html` | 182 tests, 0 failures, `BUILD SUCCESS` |
 | `mvn compile exec:java "-Dexec.mainClass=com.rosewood.payroll.app.Demo"` | Runs the demo, which prints four payslips | The output shown below |
-| `mvn test-compile org.pitest:pitest-maven:mutationCoverage` | Runs PIT mutation testing and writes the report to `target/pit-reports/index.html` | 78 mutants, 69 killed, test strength 99% (explained under [Tests](#tests)) |
+| `mvn test-compile org.pitest:pitest-maven:mutationCoverage` | Runs PIT mutation testing and writes the report to `target/pit-reports/index.html` | 80 mutants, 71 killed, test strength 99% (explained under [Tests](#tests)) |
 | `mvn clean javadoc:javadoc -Ddoclint=all` | Builds the Javadoc with every lint check switched on, into `target/reports/apidocs/index.html` | 0 warnings |
 
 The demo's `-D` argument is in quotes because Windows PowerShell otherwise splits it
@@ -282,7 +282,7 @@ first, so the tests check that results are right, not just that code ran.
 | Test class | Tests | What it covers |
 |---|---|---|
 | [PayrollCalculatorTest](src/test/java/com/rosewood/payroll/netpay/PayrollCalculatorTest.java) | 3 | The original AI tests, fixed in place (T1 to T3) |
-| [PayrollCalculatorBehaviourTest](src/test/java/com/rosewood/payroll/netpay/PayrollCalculatorBehaviourTest.java) | 25 | Every band and both sides of every band edge, overtime, zero hours, the full payslip, unknown and missing employees, a failing repository, invalid input, and rounding |
+| [PayrollCalculatorBehaviourTest](src/test/java/com/rosewood/payroll/netpay/PayrollCalculatorBehaviourTest.java) | 26 | Every band and both sides of every band edge, overtime, zero hours, the full payslip, unknown and missing employees, a failing repository, invalid input, and rounding |
 | [AddingATaxBandTest](src/test/java/com/rosewood/payroll/netpay/AddingATaxBandTest.java) | 6 | A new band with its own rule plugs in without changing existing classes, and a band that takes more than the gross pay is refused |
 | [PayRulesThatAlwaysHoldTest](src/test/java/com/rosewood/payroll/netpay/PayRulesThatAlwaysHoldTest.java) | 72 | Rules that must hold for every timesheet, checked on a grid of 8 hours values x 8 rates: tax between zero and gross pay, net pay never negative, and more hours never less gross pay |
 | [PayslipTest](src/test/java/com/rosewood/payroll/netpay/PayslipTest.java) | 6 | A payslip whose tax is below zero or above gross pay, or whose lines do not add up, is refused, and both edges are accepted |
@@ -292,6 +292,7 @@ first, so the tests check that results are right, not just that code ran.
 | [TaxScheduleTest](src/test/java/com/rosewood/payroll/tax/TaxScheduleTest.java) | 19 | Choosing a band at every edge, and every way a set of bands can fail to fit together |
 | [FlatRateTaxBandTest](src/test/java/com/rosewood/payroll/tax/FlatRateTaxBandTest.java) | 9 | Ranges, the whole-gross rule, rounding, and refusing bad rates and bounds |
 | [MoneyTest](src/test/java/com/rosewood/payroll/money/MoneyTest.java) | 13 | Half-up rounding, equality, arithmetic and formatting |
+| [EmployeeTest](src/test/java/com/rosewood/payroll/employee/EmployeeTest.java) | 5 | Keeping the id and name, and refusing null, empty or whitespace-only values for either field |
 | [InMemoryEmployeeRepositoryTest](src/test/java/com/rosewood/payroll/employee/InMemoryEmployeeRepositoryTest.java) | 6 | Finding employees, and refusing duplicate ids and nulls |
 | [PayslipPrinterTest](src/test/java/com/rosewood/payroll/app/PayslipPrinterTest.java) | 3 | The exact printed payslip, and refusals going to their own stream |
 
@@ -316,10 +317,10 @@ alone, which [ANALYSIS.md](ANALYSIS.md) uses, are shown in brackets.
 
 | Measure | Starter | Now |
 |---|---|---|
-| Tests | 3 | 176 |
-| JaCoCo line coverage | 21 of 34 lines (10 of 16 in `PayrollCalculator`) | 190 of 206 lines, and all 16 missed lines are in `Demo` |
-| JaCoCo branch coverage | 2 of 6 | 54 of 54 |
-| PIT mutants killed | 3 of 21 (2 of 15 in `PayrollCalculator`) | 69 of 78 |
+| Tests | 3 | 182 |
+| JaCoCo line coverage | 21 of 34 lines (10 of 16 in `PayrollCalculator`) | 194 of 210 lines, and all 16 missed lines are in `Demo` |
+| JaCoCo branch coverage | 2 of 6 | 56 of 56 |
+| PIT mutants killed | 3 of 21 (2 of 15 in `PayrollCalculator`) | 71 of 80 |
 
 Of the 9 mutants PIT does not kill:
 
@@ -337,7 +338,7 @@ one that changes behaviour is caught.
 | Part | Outcome | Notes |
 |---|---|---|
 | The pay rules: 40-hour threshold, time-and-a-half, bands at 1000 and 5000 with rates of 5%, 15% and 25% | Kept | Pinned by tests before any change, so the refactor could not alter them |
-| `Employee` | Kept | Moved to `employee` and documented |
+| `Employee` | Fixed | Moved to `employee`, documented, and refuses null or blank ids and names |
 | `EmployeeRepository` | Fixed | Returns `Optional` instead of `null`, and documents what an empty result means |
 | `InMemoryEmployeeRepository` | Fixed | Given its employees instead of creating them, and refuses duplicate ids |
 | `PayrollCalculator` | Rewritten | Now coordinates injected parts and returns a `Payslip`, with no catch-all and no printing |
