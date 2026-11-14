@@ -88,14 +88,19 @@ class PayrollCalculatorBehaviourTest {
     @Nested
     class TaxBands {
 
+        // The 999.99 and 1000.00 rows together pin the tax cliff that is kept on purpose:
+        // one more pesewa of gross pay moves the whole gross into the 15% band, so net
+        // pay drops from 949.99 to 850.00.
+        //   40h at 24.99975: gross 999.99, tax 49.9995 -> 50.00, net 949.99
         @ParameterizedTest(name = "{2}: {0}h at {1} -> {3} band, net {4}")
         @CsvSource({
-                "40, 20,      LOW band,                     LOW,    760.00",
-                "37, 27,      LOW band top (gross 999),     LOW,    949.05",
-                "40, 25,      MEDIUM band starts at 1000,   MEDIUM, 850.00",
-                "40, 124.975, MEDIUM band top (gross 4999), MEDIUM, 4249.15",
-                "40, 125,     HIGH band starts at 5000,     HIGH,   3750.00",
-                "40, 200,     HIGH band,                    HIGH,   6000.00",
+                "40, 20,       LOW band,                       LOW,    760.00",
+                "37, 27,       LOW band top (gross 999),       LOW,    949.05",
+                "40, 24.99975, LOW band last pesewa (999.99),  LOW,    949.99",
+                "40, 25,       MEDIUM band starts at 1000,     MEDIUM, 850.00",
+                "40, 124.975,  MEDIUM band top (gross 4999),   MEDIUM, 4249.15",
+                "40, 125,      HIGH band starts at 5000,       HIGH,   3750.00",
+                "40, 200,      HIGH band,                      HIGH,   6000.00",
         })
         void taxesGrossPayAtTheRateOfItsBand(BigDecimal hours, BigDecimal rate, String description,
                                              String expectedBand, String expectedNet) throws PayrollException {
