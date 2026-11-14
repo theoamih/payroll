@@ -3,6 +3,7 @@ package com.rosewood.payroll.netpay;
 import com.rosewood.payroll.PayrollException;
 import com.rosewood.payroll.employee.Employee;
 import com.rosewood.payroll.employee.EmployeeNotFoundException;
+import com.rosewood.payroll.employee.EmployeeRepository;
 import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
 
 import org.junit.jupiter.api.Nested;
@@ -15,8 +16,11 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests the net pay that PayrollCalculator actually returns, written before any
@@ -40,8 +44,8 @@ class PayrollCalculatorBehaviourTest {
     @Nested
     class Construction {
 
-        // A null repository would fail inside calculateNetPay, where the catch-all (C1)
-        // would turn it into 0 pay for everyone. It must be refused straight away.
+        // A null repository would otherwise only fail later, inside calculateNetPay,
+        // far from the code that made the mistake. It is refused straight away.
         @Test
         void refusesAMissingRepository() {
             assertThrows(NullPointerException.class, () -> new PayrollCalculator(null));
@@ -112,6 +116,30 @@ class PayrollCalculatorBehaviourTest {
         void rejectsAMissingEmployeeId() {
             assertThrows(NullPointerException.class, () -> calculator.calculateNetPay(null, 40, 20),
                     "a missing employee id must be rejected, not paid");
+        }
+    }
+
+    @Nested
+    class FailingRepository {
+
+        // C1: the starter code caught every exception and returned 0, so a broken
+        // employee store would have looked like a valid payslip. This guards against a
+        // catch-all ever being put back around the lookup.
+        @Test
+        void letsALookupFailureReachTheCallerInsteadOfPayingZero() {
+            IllegalStateException failure = new IllegalStateException("employee store unavailable");
+
+            EmployeeRepository repository = mock(EmployeeRepository.class);
+            when(repository.findById(KNOWN_EMPLOYEE)).thenThrow(failure);
+
+            PayrollCalculator calculatorWithFailingStore = new PayrollCalculator(repository);
+
+            IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                    () -> calculatorWithFailingStore.calculateNetPay(KNOWN_EMPLOYEE, 40, 20));
+
+            // The same exception object, not a replacement, so no detail about the
+            // original failure is lost on the way to the caller.
+            assertSame(failure, thrown);
         }
     }
 
