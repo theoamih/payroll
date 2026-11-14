@@ -13,7 +13,7 @@ class PayrollCalculatorTest {
 
     @Test
     void calculatesNetPay() {
-        PayrollCalculator calculator = new PayrollCalculator();
+        PayrollCalculator calculator = new PayrollCalculator(new InMemoryEmployeeRepository());
         double net = calculator.calculateNetPay("e1", 40, 20);
         // 40 h at 20 is a gross of 800, in the LOW band (5%): 800 - 40 = 760
         assertEquals(760.0, net, FLOATING_POINT_TOLERANCE);
@@ -21,15 +21,21 @@ class PayrollCalculatorTest {
 
     @Test
     void calculatesOvertimePay() {
-        // mock the calculator and check it returns what we told it to
-        PayrollCalculator calculator = mock(PayrollCalculator.class);
-        when(calculator.calculateNetPay("e2", 50, 30)).thenReturn(1402.5);
-        assertEquals(1402.5, calculator.calculateNetPay("e2", 50, 30));
+        // Mock the dependency, not the class under test, so the real pay calculation runs.
+        EmployeeRepository repository = mock(EmployeeRepository.class);
+        when(repository.findById("e2")).thenReturn(new Employee("e2", "Kwame Owusu"));
+        PayrollCalculator calculator = new PayrollCalculator(repository);
+
+        double net = calculator.calculateNetPay("e2", 50, 30);
+
+        // 50 h at 30: 1500, plus 10 overtime hours x 30 x 0.5 = 150, is a gross of 1650,
+        // in the MEDIUM band (15%): 1650 - 247.50 = 1402.50
+        assertEquals(1402.5, net, FLOATING_POINT_TOLERANCE);
     }
 
     @Test
     void returnsPayForAnEmployee() {
-        PayrollCalculator calculator = new PayrollCalculator();
+        PayrollCalculator calculator = new PayrollCalculator(new InMemoryEmployeeRepository());
         double net = calculator.calculateNetPay("e1", 35, 25);
         // 35 h at 25 is a gross of 875, in the LOW band (5%): 875 - 43.75 = 831.25
         assertEquals(831.25, net, FLOATING_POINT_TOLERANCE);

@@ -1,9 +1,14 @@
 package com.rosewood.payroll;
 
+import java.util.Objects;
+
 public class PayrollCalculator {
 
-    // The calculator makes its own repository, so callers and tests cannot give it another.
-    private final EmployeeRepository repository = new InMemoryEmployeeRepository();
+    private final EmployeeRepository repository;
+
+    public PayrollCalculator(EmployeeRepository repository) {
+        this.repository = Objects.requireNonNull(repository, "repository must not be null");
+    }
 
     public double calculateNetPay(String employeeId, double hoursWorked, double hourlyRate) {
         try {

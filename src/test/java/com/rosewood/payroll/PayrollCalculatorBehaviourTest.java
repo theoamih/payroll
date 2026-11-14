@@ -28,7 +28,18 @@ class PayrollCalculatorBehaviourTest {
 
     private static final String KNOWN_DEFECT = "known-defect";
 
-    private final PayrollCalculator calculator = new PayrollCalculator();
+    private final PayrollCalculator calculator = new PayrollCalculator(new InMemoryEmployeeRepository());
+
+    @Nested
+    class Construction {
+
+        // A null repository would fail inside calculateNetPay, where the catch-all (C1)
+        // would turn it into 0 pay for everyone. It must be refused straight away.
+        @Test
+        void refusesAMissingRepository() {
+            assertThrows(NullPointerException.class, () -> new PayrollCalculator(null));
+        }
+    }
 
     @Nested
     class TaxBands {
