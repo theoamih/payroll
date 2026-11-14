@@ -4,6 +4,9 @@ I wrote this before changing any code. I didn't want to trust anything I had onl
 read, so every claim below comes from something I ran: the demo, the existing
 tests, JaCoCo, PIT, or a direct call to `calculateNetPay` with the inputs shown.
 
+Each problem has an ID so it can be referred to later: C1 to C12 are problems in
+the code (Part 1), and T1 to T5 are problems in the tests (Part 2).
+
 ## First impressions vs. what the tools said
 
 On the surface the code looks finished:
@@ -244,3 +247,73 @@ zero or less.
 10 of 16 lines covered sounds reasonable. But coverage only tells you a line ran,
 not that anything checked what it produced. PIT is the better measure here, and
 it says the tests miss 13 of 15 planted bugs.
+
+---
+
+## Part 3 - Confirming the findings with tests
+
+The brief asks for the analysis to come before any change, so I analysed as much
+as I could before changing any production code. Most of the evidence above came
+from one-off runs: the demo, and direct calls to `calculateNetPay` with chosen
+inputs. Those runs convinced me, but nobody else can rerun them. So, still without
+touching the production code, I wrote tests to confirm the findings in a form
+anyone can repeat. They are all in `PayrollCalculatorBehaviourTest`. The original
+AI-generated tests are left exactly as they were.
+
+### What the starter code already gets right
+
+I pinned the pay the code calculates correctly today, so the refactor can't change
+it without a test failing. There's a case in each tax band, both sides of every
+band edge (999 / 1000 and 4999 / 5000), exactly 40 hours against 40.5, 41 and 50
+hours, and zero hours. I worked each expected amount out by hand, and each
+matches what the starter code returns. All 11 pass.
+
+The new tests check results, not just that code ran, and PIT shows the difference.
+With them added, it catches 13 of the 15 planted bugs in `PayrollCalculator`,
+up from 2. The two it still misses aren't gaps in the tests:
+
+- Changing `hoursWorked > 40` to `hoursWorked >= 40` makes no difference to any
+  result, because at exactly 40 hours the overtime part is `(40 - 40) x rate x 0.5 = 0`.
+  No test can tell the two versions apart.
+- Removing the `println` doesn't change the amount returned. That line is coming
+  out of the calculation anyway (C8).
+
+### What the starter code gets wrong
+
+For each defect in C1 to C4, I wrote a test that describes the **correct**
+behaviour. On the starter code every one of them fails, and the failure message
+is the evidence. These tests are tagged `known-defect`, so the normal build leaves
+them out and stays green. To see them fail:
+
+```bash
+mvn test -Pknown-defects
+```
+
+Result on the starter code: 8 run, 8 fail.
+
+| Problem | Test | Failure message |
+|---|---|---|
+| C1, C2 | `rejectsAnEmployeeWhoDoesNotExist` | an employee who does not exist must be rejected, not paid ==> Expected java.lang.Exception to be thrown, but nothing was thrown. |
+| C1, C2 | `rejectsAMissingEmployeeId` | a missing employee id must be rejected, not paid ==> Expected java.lang.Exception to be thrown, but nothing was thrown. |
+| C3 | `rejectsNegativeHours` | negative hours must be rejected ==> Expected java.lang.Exception to be thrown, but nothing was thrown. |
+| C3 | `rejectsANegativeRate` | a negative hourly rate must be rejected ==> Expected java.lang.Exception to be thrown, but nothing was thrown. |
+| C3 | `rejectsHoursThatAreNotANumber` | hours that are not a number must be rejected ==> Expected java.lang.Exception to be thrown, but nothing was thrown. |
+| C3 | `rejectsInfiniteHours` | infinite hours must be rejected ==> Expected java.lang.Exception to be thrown, but nothing was thrown. |
+| C4 | `paysAnAmountInWholePesewas` (41 h at 0.10) | net pay must be a whole number of pesewas, but was 3.9425000000000003 |
+| C4 | `paysAnAmountInWholePesewas` (37.5 h at 13.33) | net pay must be a whole number of pesewas, but was 474.88125 |
+
+The tests didn't turn up anything new. They confirmed C1 to C4 exactly as I
+described them above, which is what I wanted before relying on them.
+
+Some decisions are left open on purpose. The failure tests only ask for "an
+exception", because I haven't designed the custom exceptions yet. The rounding
+test only checks for whole pesewas, because the rounding rule hasn't been chosen.
+Each test is tightened when its fix is made.
+
+### Keeping the evidence
+
+These tests stay in the project. When a defect is fixed, its test loses the
+`known-defect` tag and joins the normal build, where it keeps checking the fix.
+The code as it was when these results were recorded is tagged `analysis-complete`
+in git. Checking out that tag and running `mvn test -Pknown-defects` shows every
+failure above, even after the fixes are in.
