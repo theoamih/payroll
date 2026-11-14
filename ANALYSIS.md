@@ -29,7 +29,7 @@ has changed since, so to reproduce these results, check that commit out first:
 
 ```bash
 git checkout 8c41eba
-mvn compile exec:java -Dexec.mainClass=com.rosewood.payroll.Demo
+mvn compile exec:java "-Dexec.mainClass=com.rosewood.payroll.Demo"
 mvn verify                                                   # tests + JaCoCo
 mvn test-compile org.pitest:pitest-maven:mutationCoverage    # PIT
 git switch -                                                 # back to where you were
