@@ -22,9 +22,9 @@ or JDK command, so it runs the same way on Windows, macOS and Linux.
 
 | Command | What it does | Result on the current code |
 |---|---|---|
-| `mvn clean verify` | Compiles, runs every test, and writes the JaCoCo coverage report to `target/site/jacoco/index.html` | 95 tests, 0 failures, `BUILD SUCCESS` |
+| `mvn clean verify` | Compiles, runs every test, and writes the JaCoCo coverage report to `target/site/jacoco/index.html` | 99 tests, 0 failures, `BUILD SUCCESS` |
 | `mvn compile exec:java "-Dexec.mainClass=com.rosewood.payroll.app.Demo"` | Runs the demo, which prints four payslips | The output shown below |
-| `mvn test-compile org.pitest:pitest-maven:mutationCoverage` | Runs PIT mutation testing and writes the report to `target/pit-reports/index.html` | 73 mutants, 66 killed, test strength 99% (explained under [Tests](#tests)) |
+| `mvn test-compile org.pitest:pitest-maven:mutationCoverage` | Runs PIT mutation testing and writes the report to `target/pit-reports/index.html` | 75 mutants, 66 killed, test strength 99% (explained under [Tests](#tests)) |
 | `mvn clean javadoc:javadoc -Ddoclint=all` | Builds the Javadoc with every lint check switched on, into `target/reports/apidocs/index.html` | 0 warnings |
 
 The demo's `-D` argument is in quotes because Windows PowerShell otherwise splits it
@@ -59,7 +59,7 @@ including the new tax band Rosewood is about to add.
 |---|---|---|
 | `com.rosewood.payroll` | [PayrollException](src/main/java/com/rosewood/payroll/PayrollException.java) | The base type for every payroll failure a caller is expected to handle |
 | `employee` | [Employee](src/main/java/com/rosewood/payroll/employee/Employee.java), [EmployeeRepository](src/main/java/com/rosewood/payroll/employee/EmployeeRepository.java), [InMemoryEmployeeRepository](src/main/java/com/rosewood/payroll/employee/InMemoryEmployeeRepository.java), [EmployeeNotFoundException](src/main/java/com/rosewood/payroll/employee/EmployeeNotFoundException.java) | Finding employees |
-| `pay` | [GrossPayCalculator](src/main/java/com/rosewood/payroll/pay/GrossPayCalculator.java), [InvalidPayInputException](src/main/java/com/rosewood/payroll/pay/InvalidPayInputException.java) | Checking the timesheet and working out gross pay, including overtime |
+| `pay` | [GrossPayCalculator](src/main/java/com/rosewood/payroll/pay/GrossPayCalculator.java), [Hours](src/main/java/com/rosewood/payroll/pay/Hours.java), [HourlyRate](src/main/java/com/rosewood/payroll/pay/HourlyRate.java), [InvalidPayInputException](src/main/java/com/rosewood/payroll/pay/InvalidPayInputException.java) | Checking the timesheet and working out gross pay, including overtime |
 | `money` | [Money](src/main/java/com/rosewood/payroll/money/Money.java) | Holding an amount in cedis, rounded to whole pesewas in one place |
 | `tax` | [TaxBand](src/main/java/com/rosewood/payroll/tax/TaxBand.java), [FlatRateTaxBand](src/main/java/com/rosewood/payroll/tax/FlatRateTaxBand.java), [TaxSchedule](src/main/java/com/rosewood/payroll/tax/TaxSchedule.java), [RosewoodTaxBands](src/main/java/com/rosewood/payroll/tax/RosewoodTaxBands.java), [InvalidTaxScheduleException](src/main/java/com/rosewood/payroll/tax/InvalidTaxScheduleException.java) | Deciding which band applies and how much tax it takes |
 | `netpay` | [PayrollCalculator](src/main/java/com/rosewood/payroll/netpay/PayrollCalculator.java), [Payslip](src/main/java/com/rosewood/payroll/netpay/Payslip.java) | Putting the steps together into a payslip |
@@ -107,7 +107,7 @@ The most serious was **C1**: a `catch (Exception e)` that returned `0` for any
 failure. Because of it, an unknown employee got a payslip of `0.0`, which looks the
 same as a person who worked no hours, and the real error was thrown away.
 
-The fixes for C1 to C10 and T1 to T3 were made in small commits, and each commit
+The fixes for C1 to C11 and T1 to T3 were made in small commits, and each commit
 subject names the IDs it fixes, so `git log --oneline --grep=C6` shows the commit for C6.
 
 | ID | Problem | What changed |
@@ -122,7 +122,7 @@ subject names the IDs it fixes, so `git log --oneline --grep=C6` shows the commi
 | C8 | The calculation printed to the console | The calculator returns a `Payslip`, and `PayslipPrinter` prints it |
 | C9 | Magic numbers | Named constants (`OVERTIME_THRESHOLD_HOURS`, `OVERTIME_PREMIUM`) and named bands in `RosewoodTaxBands` |
 | C10 | Test employees inside the production repository | The repository is given its employees. `Demo` and the tests supply them |
-| C11 | Hours and rate are easy to swap | **Not fixed.** Both are still `BigDecimal`, so swapping them still compiles |
+| C11 | Hours and rate are easy to swap | Each has its own type, `Hours` and `HourlyRate`, so a call with the two swapped no longer compiles |
 | C12 | The employee record is not used in the calculation | **Kept.** Employee records hold only an id and a name, and the rate is an input to the calculation, as in the starter |
 | T1 | A test mocked the class it was testing | The mock now stands in for the repository, and the real calculator runs |
 | T2 | `assertNotNull` on a primitive | Asserts the exact net pay, 831.25 |
@@ -141,6 +141,7 @@ subject names the IDs it fixes, so `git log --oneline --grep=C6` shows the commi
 | `BigDecimal` and a `Money` type | `double` | `double` cannot hold most decimal amounts exactly (`3.9425000000000003`). `Money` rounds in one place, so the rule cannot drift |
 | Round half-up | Half-even (banker's rounding) | It is how a person checks a payslip by hand, so an employee working it out gets the same answer |
 | Round gross once and tax separately, then net = gross - tax | Rounding net pay on its own | The three lines on a payslip always add up, and `Payslip` enforces it |
+| `Hours` and `HourlyRate` types that only refuse null | Types that also check their own value | A swap no longer compiles, and every timesheet rule stays in `GrossPayCalculator`, so a bad timesheet is still a checked `InvalidPayInputException` the caller must handle. `HourlyRate` is not `Money`, because a rate such as 124.975 must not be rounded |
 | Check the timesheet before looking up the employee | Lookup first | A bad timesheet is reported as what it is, and the employee store is not touched. A test proves the store is never called |
 | Reject a rate of zero, set no maximum for hours | Allowing zero, or inventing a cap | A zero rate is almost certainly a data-entry mistake. The pay period is not known, so any maximum for hours would be made up |
 | Interfaces only for `EmployeeRepository` and `TaxBand` | An interface for every class | Those are the two places where a second implementation is expected. `GrossPayCalculator` is concrete but still injected |
@@ -211,6 +212,8 @@ first, so the tests check that results are right, not just that code ran.
 | [AddingATaxBandTest](src/test/java/com/rosewood/payroll/netpay/AddingATaxBandTest.java) | 5 | A new band with its own rule plugs in without changing existing classes |
 | [PayslipTest](src/test/java/com/rosewood/payroll/netpay/PayslipTest.java) | 3 | A payslip whose lines do not add up is refused |
 | [GrossPayCalculatorTest](src/test/java/com/rosewood/payroll/pay/GrossPayCalculatorTest.java) | 10 | Overtime, rounding gross once, and timesheet checks |
+| [HoursTest](src/test/java/com/rosewood/payroll/pay/HoursTest.java) | 2 | Part hours kept exactly, and a missing value refused |
+| [HourlyRateTest](src/test/java/com/rosewood/payroll/pay/HourlyRateTest.java) | 2 | A rate kept without rounding, and a missing value refused |
 | [TaxScheduleTest](src/test/java/com/rosewood/payroll/tax/TaxScheduleTest.java) | 18 | Choosing a band at every edge, and every way a set of bands can fail to fit together |
 | [FlatRateTaxBandTest](src/test/java/com/rosewood/payroll/tax/FlatRateTaxBandTest.java) | 9 | Ranges, the whole-gross rule, rounding, and refusing bad rates and bounds |
 | [MoneyTest](src/test/java/com/rosewood/payroll/money/MoneyTest.java) | 13 | Half-up rounding, equality, arithmetic and formatting |
@@ -225,13 +228,13 @@ test is always the real one.
 
 | Measure | Starter | Now |
 |---|---|---|
-| Tests | 3 | 95 |
-| JaCoCo line coverage | 10 of 16 lines in `PayrollCalculator` | 169 of 183 lines, and all 14 missed lines are in `Demo`. 44 of 44 branches |
-| PIT mutants killed | 2 of 15 | 66 of 73 |
+| Tests | 3 | 99 |
+| JaCoCo line coverage | 10 of 16 lines in `PayrollCalculator` | 177 of 193 lines, and all 16 missed lines are in `Demo`. 44 of 44 branches |
+| PIT mutants killed | 2 of 15 | 66 of 75 |
 
-Of the 7 mutants PIT does not kill:
+Of the 9 mutants PIT does not kill:
 
-- **6 are in `Demo`**, which has no tests. It only wires the parts together, and
+- **8 are in `Demo`**, which has no tests. It only wires the parts together, and
   running it shows its output.
 - **1 is equivalent.** Changing `hoursWorked > 40` to `>= 40` gives the same pay,
   because at exactly 40 hours the overtime premium is 0 either way. No test can tell
