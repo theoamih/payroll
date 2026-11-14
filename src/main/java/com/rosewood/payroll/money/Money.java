@@ -17,7 +17,7 @@ import java.util.Objects;
  *
  * @param amount the amount in cedis, rounded to pesewas
  */
-public record Money(BigDecimal amount) {
+public record Money(BigDecimal amount) implements Comparable<Money> {
 
     private static final int PESEWA_DECIMAL_PLACES = 2;
 
@@ -67,7 +67,22 @@ public record Money(BigDecimal amount) {
      * @return true if this amount is smaller than the other
      */
     public boolean isLessThan(Money other) {
-        return amount.compareTo(other.amount) < 0;
+        return compareTo(other) < 0;
+    }
+
+    /**
+     * Orders amounts by value, so amounts can be sorted.
+     *
+     * <p>Because every amount is held to two decimal places, two amounts compare as
+     * equal exactly when {@link #equals(Object)} says they are equal.
+     *
+     * @param other the amount to compare with
+     * @return a negative number, zero, or a positive number as this amount is smaller
+     *         than, equal to, or larger than the other
+     */
+    @Override
+    public int compareTo(Money other) {
+        return amount.compareTo(other.amount);
     }
 
     /**

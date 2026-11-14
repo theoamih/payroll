@@ -70,6 +70,16 @@ class MoneyTest {
     }
 
     @Test
+    void ordersAmountsByValue() {
+        Money smaller = new Money(new BigDecimal("999.99"));
+        Money larger = new Money(new BigDecimal("1000"));
+
+        assertTrue(smaller.compareTo(larger) < 0);
+        assertTrue(larger.compareTo(smaller) > 0);
+        assertEquals(0, larger.compareTo(new Money(new BigDecimal("1000.00"))));
+    }
+
+    @Test
     void showsTheAmountAsItWouldAppearOnAPayslip() {
         assertEquals("GHS 760.00", new Money(new BigDecimal("760")).toString());
     }

@@ -2,6 +2,7 @@ package com.rosewood.payroll.tax;
 
 import com.rosewood.payroll.money.Money;
 
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -17,67 +18,167 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TaxScheduleTest {
 
+    private static final BigDecimal TEN_PERCENT = new BigDecimal("0.10");
+
     private static Money money(String amount) {
         return new Money(new BigDecimal(amount));
     }
 
-    // Each band includes its lower bound and stops just before its upper bound, so the
-    // amounts either side of each edge land in different bands.
-    @ParameterizedTest(name = "gross {0} -> {1}")
-    @CsvSource({
-            "0.00,       LOW",
-            "999.99,     LOW",
-            "1000.00,    MEDIUM",
-            "4999.99,    MEDIUM",
-            "5000.00,    HIGH",
-            "1000000.00, HIGH",
-    })
-    void choosesTheBandWhoseRangeIncludesTheGrossPay(String gross, String expectedBand) {
-        TaxSchedule schedule = RosewoodTaxBands.schedule();
-
-        TaxBand band = schedule.bandFor(money(gross));
-
-        assertEquals(expectedBand, band.name());
+    private static TaxBand band(String name, String lowerBound, String upperBound) {
+        return FlatRateTaxBand.between(name, money(lowerBound), money(upperBound), TEN_PERCENT);
     }
 
-    @Test
-    void choosesTheSameBandWhateverOrderTheBandsWereGivenIn() {
-        TaxSchedule schedule = new TaxSchedule(List.of(
-                RosewoodTaxBands.HIGH, RosewoodTaxBands.LOW, RosewoodTaxBands.MEDIUM));
-
-        assertSame(RosewoodTaxBands.MEDIUM, schedule.bandFor(money("1000.00")));
+    private static TaxBand openBand(String name, String lowerBound) {
+        return FlatRateTaxBand.startingAt(name, money(lowerBound), TEN_PERCENT);
     }
 
-    // Until the schedule checks its bands when it is created, a gap is only found when a
-    // gross amount falls into it. It must then fail loudly, never fall back to a band.
-    @Test
-    void failsLoudlyWhenNoBandCoversTheGrossPay() {
-        TaxSchedule scheduleWithAGap = new TaxSchedule(List.of(RosewoodTaxBands.MEDIUM, RosewoodTaxBands.HIGH));
+    @Nested
+    class ChoosingABand {
 
-        IllegalStateException error = assertThrows(IllegalStateException.class,
-                () -> scheduleWithAGap.bandFor(money("500.00")));
+        // Each band includes its lower bound and stops just before its upper bound, so
+        // the amounts either side of each edge land in different bands.
+        @ParameterizedTest(name = "gross {0} -> {1}")
+        @CsvSource({
+                "0.00,       LOW",
+                "999.99,     LOW",
+                "1000.00,    MEDIUM",
+                "4999.99,    MEDIUM",
+                "5000.00,    HIGH",
+                "1000000.00, HIGH",
+        })
+        void choosesTheBandWhoseRangeIncludesTheGrossPay(String gross, String expectedBand) {
+            TaxSchedule schedule = RosewoodTaxBands.schedule();
 
-        assertEquals("no tax band covers gross pay of GHS 500.00", error.getMessage());
+            TaxBand band = schedule.bandFor(money(gross));
+
+            assertEquals(expectedBand, band.name());
+        }
+
+        @Test
+        void choosesTheSameBandWhateverOrderTheBandsWereGivenIn() {
+            TaxSchedule schedule = new TaxSchedule(List.of(
+                    RosewoodTaxBands.HIGH, RosewoodTaxBands.LOW, RosewoodTaxBands.MEDIUM));
+
+            assertSame(RosewoodTaxBands.MEDIUM, schedule.bandFor(money("1000.00")));
+        }
+
+        // Every amount from zero up is covered, so only a negative amount, which gross
+        // pay can never be, has no band. It must fail loudly, never fall back to a band.
+        @Test
+        void failsLoudlyForANegativeAmount() {
+            TaxSchedule schedule = RosewoodTaxBands.schedule();
+
+            IllegalStateException error = assertThrows(IllegalStateException.class,
+                    () -> schedule.bandFor(money("-0.01")));
+
+            assertEquals("no tax band covers gross pay of GHS -0.01", error.getMessage());
+        }
+
+        // The schedule keeps its own copy, so changing the list it was built from
+        // afterwards cannot change which band is chosen.
+        @Test
+        void isNotChangedByLaterChangesToTheListItWasGiven() {
+            List<TaxBand> bands = new ArrayList<>(List.of(
+                    RosewoodTaxBands.LOW, RosewoodTaxBands.MEDIUM, RosewoodTaxBands.HIGH));
+
+            TaxSchedule schedule = new TaxSchedule(bands);
+            bands.clear();
+
+            assertSame(RosewoodTaxBands.LOW, schedule.bandFor(money("10.00")));
+        }
     }
 
-    // The schedule keeps its own copy, so changing the list it was built from afterwards
-    // cannot change which band is chosen.
-    @Test
-    void isNotChangedByLaterChangesToTheListItWasGiven() {
-        List<TaxBand> bands = new ArrayList<>(List.of(
-                RosewoodTaxBands.LOW, RosewoodTaxBands.MEDIUM, RosewoodTaxBands.HIGH));
+    // A schedule is checked when it is created, so a badly set-up band is found when the
+    // program starts, not on payday when someone's pay falls into the gap it leaves.
+    @Nested
+    class CheckingTheBandsWhenCreated {
 
-        TaxSchedule schedule = new TaxSchedule(bands);
-        bands.clear();
+        @Test
+        void acceptsASingleBandThatCoversEverything() {
+            TaxSchedule schedule = new TaxSchedule(List.of(openBand("FLAT", "0")));
 
-        assertSame(RosewoodTaxBands.LOW, schedule.bandFor(money("10.00")));
-    }
+            assertEquals("FLAT", schedule.bandFor(money("123.45")).name());
+        }
 
-    @Test
-    void refusesAMissingListOrBand() {
-        List<TaxBand> bandsWithANull = Arrays.asList(RosewoodTaxBands.LOW, null);
+        @Test
+        void refusesAScheduleWithNoBands() {
+            List<TaxBand> noBands = List.of();
 
-        assertThrows(NullPointerException.class, () -> new TaxSchedule(null));
-        assertThrows(NullPointerException.class, () -> new TaxSchedule(bandsWithANull));
+            InvalidTaxScheduleException error = assertThrows(InvalidTaxScheduleException.class,
+                    () -> new TaxSchedule(noBands));
+
+            assertEquals("invalid tax schedule: there must be at least one band", error.getMessage());
+        }
+
+        @Test
+        void refusesBandsThatDoNotStartAtZero() {
+            List<TaxBand> bands = List.of(band("LOW", "100", "1000"), openBand("HIGH", "1000"));
+
+            InvalidTaxScheduleException error = assertThrows(InvalidTaxScheduleException.class,
+                    () -> new TaxSchedule(bands));
+
+            assertEquals("invalid tax schedule: the lowest band, LOW, must start at GHS 0.00"
+                    + " but starts at GHS 100.00", error.getMessage());
+        }
+
+        @Test
+        void refusesAGapBetweenTwoBands() {
+            List<TaxBand> bands = List.of(band("LOW", "0", "1000"), openBand("HIGH", "1200"));
+
+            InvalidTaxScheduleException error = assertThrows(InvalidTaxScheduleException.class,
+                    () -> new TaxSchedule(bands));
+
+            assertEquals("invalid tax schedule: there is a gap between band LOW, which ends at GHS 1000.00,"
+                    + " and band HIGH, which starts at GHS 1200.00", error.getMessage());
+        }
+
+        @Test
+        void refusesTwoBandsThatOverlap() {
+            List<TaxBand> bands = List.of(band("LOW", "0", "1200"), openBand("HIGH", "1000"));
+
+            InvalidTaxScheduleException error = assertThrows(InvalidTaxScheduleException.class,
+                    () -> new TaxSchedule(bands));
+
+            assertEquals("invalid tax schedule: band LOW, which ends at GHS 1200.00,"
+                    + " overlaps band HIGH, which starts at GHS 1000.00", error.getMessage());
+        }
+
+        // Two bands starting at the same amount both claim it, so this is an overlap too.
+        @Test
+        void refusesTwoBandsThatStartAtTheSameAmount() {
+            List<TaxBand> bands = List.of(band("LOW", "0", "1000"), openBand("ALSO LOW", "0"));
+
+            assertThrows(InvalidTaxScheduleException.class, () -> new TaxSchedule(bands));
+        }
+
+        @Test
+        void refusesAnOpenEndedBandThatIsNotTheHighest() {
+            List<TaxBand> bands = List.of(openBand("LOW", "0"), openBand("HIGH", "1000"));
+
+            InvalidTaxScheduleException error = assertThrows(InvalidTaxScheduleException.class,
+                    () -> new TaxSchedule(bands));
+
+            assertEquals("invalid tax schedule: band LOW has no upper limit,"
+                    + " so band HIGH can never apply", error.getMessage());
+        }
+
+        @Test
+        void refusesAHighestBandWithAnUpperLimit() {
+            List<TaxBand> bands = List.of(band("LOW", "0", "1000"), band("HIGH", "1000", "9000"));
+
+            InvalidTaxScheduleException error = assertThrows(InvalidTaxScheduleException.class,
+                    () -> new TaxSchedule(bands));
+
+            assertEquals("invalid tax schedule: the highest band, HIGH, must have no upper limit,"
+                    + " but ends at GHS 9000.00", error.getMessage());
+        }
+
+        @Test
+        void refusesAMissingListOrBand() {
+            List<TaxBand> bandsWithANull = Arrays.asList(RosewoodTaxBands.LOW, null);
+
+            assertThrows(NullPointerException.class, () -> new TaxSchedule(null));
+            assertThrows(NullPointerException.class, () -> new TaxSchedule(bandsWithANull));
+        }
     }
 }
