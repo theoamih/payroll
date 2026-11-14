@@ -8,6 +8,8 @@ import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
 import com.rosewood.payroll.money.Money;
 import com.rosewood.payroll.pay.GrossPayCalculator;
 import com.rosewood.payroll.pay.InvalidPayInputException;
+import com.rosewood.payroll.tax.RosewoodTaxBands;
+import com.rosewood.payroll.tax.TaxSchedule;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -46,7 +48,7 @@ class PayrollCalculatorBehaviourTest {
     // Every test builds its calculator here, so a test only states the part it cares
     // about, the employee store, and the real pay rules are always the ones under test.
     private static PayrollCalculator calculatorWith(EmployeeRepository repository) {
-        return new PayrollCalculator(repository, new GrossPayCalculator());
+        return new PayrollCalculator(repository, new GrossPayCalculator(), RosewoodTaxBands.schedule());
     }
 
     private static Money money(String amount) {
@@ -60,32 +62,38 @@ class PayrollCalculatorBehaviourTest {
         // from the code that made the mistake. It is refused straight away.
         @Test
         void refusesAMissingPart() {
-            GrossPayCalculator grossPayCalculator = new GrossPayCalculator();
             EmployeeRepository repository = new InMemoryEmployeeRepository(List.of());
+            GrossPayCalculator grossPayCalculator = new GrossPayCalculator();
+            TaxSchedule taxSchedule = RosewoodTaxBands.schedule();
 
-            assertThrows(NullPointerException.class, () -> new PayrollCalculator(null, grossPayCalculator));
-            assertThrows(NullPointerException.class, () -> new PayrollCalculator(repository, null));
+            assertThrows(NullPointerException.class,
+                    () -> new PayrollCalculator(null, grossPayCalculator, taxSchedule));
+            assertThrows(NullPointerException.class,
+                    () -> new PayrollCalculator(repository, null, taxSchedule));
+            assertThrows(NullPointerException.class,
+                    () -> new PayrollCalculator(repository, grossPayCalculator, null));
         }
     }
 
     @Nested
     class TaxBands {
 
-        @ParameterizedTest(name = "{2}: {0}h at {1} -> net {3}")
+        @ParameterizedTest(name = "{2}: {0}h at {1} -> {3} band, net {4}")
         @CsvSource({
-                "40, 20,      LOW band,                     760.00",
-                "37, 27,      LOW band top (gross 999),     949.05",
-                "40, 25,      MEDIUM band starts at 1000,   850.00",
-                "40, 124.975, MEDIUM band top (gross 4999), 4249.15",
-                "40, 125,     HIGH band starts at 5000,     3750.00",
-                "40, 200,     HIGH band,                    6000.00",
+                "40, 20,      LOW band,                     LOW,    760.00",
+                "37, 27,      LOW band top (gross 999),     LOW,    949.05",
+                "40, 25,      MEDIUM band starts at 1000,   MEDIUM, 850.00",
+                "40, 124.975, MEDIUM band top (gross 4999), MEDIUM, 4249.15",
+                "40, 125,     HIGH band starts at 5000,     HIGH,   3750.00",
+                "40, 200,     HIGH band,                    HIGH,   6000.00",
         })
-        void taxesGrossPayAtTheRateOfItsBand(BigDecimal hours, BigDecimal rate, String band, String expectedNet)
-                throws PayrollException {
+        void taxesGrossPayAtTheRateOfItsBand(BigDecimal hours, BigDecimal rate, String description,
+                                             String expectedBand, String expectedNet) throws PayrollException {
 
-            Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, hours, rate).netPay();
+            Payslip payslip = calculator.calculatePayslip(KNOWN_EMPLOYEE, hours, rate);
 
-            assertEquals(money(expectedNet), net);
+            assertEquals(expectedBand, payslip.taxBand());
+            assertEquals(money(expectedNet), payslip.netPay());
         }
     }
 
@@ -134,6 +142,7 @@ class PayrollCalculatorBehaviourTest {
 
             assertSame(kwame, payslip.employee());
             assertEquals(money("1650.00"), payslip.grossPay());
+            assertEquals("MEDIUM", payslip.taxBand());
             assertEquals(money("247.50"), payslip.tax());
             assertEquals(money("1402.50"), payslip.netPay());
         }

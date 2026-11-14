@@ -6,6 +6,7 @@ import com.rosewood.payroll.employee.EmployeeRepository;
 import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
 import com.rosewood.payroll.money.Money;
 import com.rosewood.payroll.pay.GrossPayCalculator;
+import com.rosewood.payroll.tax.RosewoodTaxBands;
 
 import org.junit.jupiter.api.Test;
 
@@ -23,7 +24,8 @@ class PayrollCalculatorTest {
     void calculatesNetPay() throws PayrollException {
         PayrollCalculator calculator = new PayrollCalculator(
                 new InMemoryEmployeeRepository(List.of(new Employee("e1", "Efua Sarpong"))),
-                new GrossPayCalculator());
+                new GrossPayCalculator(),
+                RosewoodTaxBands.schedule());
 
         Money net = calculator.calculatePayslip("e1", new BigDecimal("40"), new BigDecimal("20")).netPay();
 
@@ -37,7 +39,10 @@ class PayrollCalculatorTest {
         EmployeeRepository repository = mock(EmployeeRepository.class);
         when(repository.findById("e2")).thenReturn(Optional.of(new Employee("e2", "Kwame Owusu")));
 
-        PayrollCalculator calculator = new PayrollCalculator(repository, new GrossPayCalculator());
+        PayrollCalculator calculator = new PayrollCalculator(
+                repository,
+                new GrossPayCalculator(),
+                RosewoodTaxBands.schedule());
 
         Money net = calculator.calculatePayslip("e2", new BigDecimal("50"), new BigDecimal("30")).netPay();
 
@@ -50,7 +55,8 @@ class PayrollCalculatorTest {
     void returnsPayForAnEmployee() throws PayrollException {
         PayrollCalculator calculator = new PayrollCalculator(
                 new InMemoryEmployeeRepository(List.of(new Employee("e1", "Efua Sarpong"))),
-                new GrossPayCalculator());
+                new GrossPayCalculator(),
+                RosewoodTaxBands.schedule());
 
         Money net = calculator.calculatePayslip("e1", new BigDecimal("35"), new BigDecimal("25")).netPay();
 

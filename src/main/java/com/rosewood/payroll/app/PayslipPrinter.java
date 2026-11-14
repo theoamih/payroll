@@ -1,7 +1,6 @@
 package com.rosewood.payroll.app;
 
 import com.rosewood.payroll.PayrollException;
-import com.rosewood.payroll.money.Money;
 import com.rosewood.payroll.netpay.Payslip;
 
 import java.io.PrintStream;
@@ -34,13 +33,14 @@ public class PayslipPrinter {
     }
 
     /**
-     * Prints a payslip: who it is for, then gross pay, tax and net pay.
+     * Prints a payslip: who it is for, then gross pay, the tax band, tax and net pay.
      *
      * @param payslip the payslip to print
      */
     public void print(Payslip payslip) {
         payslips.println("Payslip for " + payslip.employee().getName() + " (" + payslip.employee().getId() + ")");
         payslips.println(line("Gross pay", payslip.grossPay()));
+        payslips.println(line("Tax band", payslip.taxBand()));
         payslips.println(line("Tax", payslip.tax()));
         payslips.println(line("Net pay", payslip.netPay()));
     }
@@ -56,10 +56,10 @@ public class PayslipPrinter {
     }
 
     /**
-     * Lays out one line of a payslip with the label on the left and the amount lined
-     * up on the right, so the amounts on a payslip sit under each other.
+     * Lays out one line of a payslip with the label on the left and the value lined
+     * up on the right, so the values on a payslip sit under each other.
      */
-    private static String line(String label, Money amount) {
-        return String.format("  %-10s%15s", label, amount);
+    private static String line(String label, Object value) {
+        return String.format("  %-10s%15s", label, value);
     }
 }

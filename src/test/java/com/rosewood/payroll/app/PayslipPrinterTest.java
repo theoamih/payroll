@@ -40,12 +40,13 @@ class PayslipPrinterTest {
     @Test
     void printsWhoThePayslipIsForAndEachLineWithAmountsLinedUp() {
         Payslip payslip = new Payslip(new Employee("e2", "Kwame Owusu"),
-                money("1650.00"), money("247.50"), money("1402.50"));
+                money("1650.00"), "MEDIUM", money("247.50"), money("1402.50"));
 
         printer.print(payslip);
 
         String expected = "Payslip for Kwame Owusu (e2)" + NEW_LINE
                 + "  Gross pay     GHS 1650.00" + NEW_LINE
+                + "  Tax band           MEDIUM" + NEW_LINE
                 + "  Tax            GHS 247.50" + NEW_LINE
                 + "  Net pay       GHS 1402.50" + NEW_LINE;
 

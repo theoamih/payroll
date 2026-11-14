@@ -20,9 +20,10 @@ class PayslipTest {
 
     @Test
     void holdsLinesThatAddUp() {
-        Payslip payslip = new Payslip(efua, money("800.00"), money("40.00"), money("760.00"));
+        Payslip payslip = new Payslip(efua, money("800.00"), "LOW", money("40.00"), money("760.00"));
 
         assertEquals(money("800.00"), payslip.grossPay());
+        assertEquals("LOW", payslip.taxBand());
         assertEquals(money("40.00"), payslip.tax());
         assertEquals(money("760.00"), payslip.netPay());
     }
@@ -32,7 +33,7 @@ class PayslipTest {
     @Test
     void refusesLinesThatDoNotAddUp() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
-                () -> new Payslip(efua, money("800.00"), money("40.00"), money("760.01")));
+                () -> new Payslip(efua, money("800.00"), "LOW", money("40.00"), money("760.01")));
 
         assertEquals("net pay GHS 760.01 must equal gross pay GHS 800.00 minus tax GHS 40.00", error.getMessage());
     }
@@ -43,9 +44,10 @@ class PayslipTest {
         Money tax = money("40.00");
         Money net = money("760.00");
 
-        assertThrows(NullPointerException.class, () -> new Payslip(null, gross, tax, net));
-        assertThrows(NullPointerException.class, () -> new Payslip(efua, null, tax, net));
-        assertThrows(NullPointerException.class, () -> new Payslip(efua, gross, null, net));
-        assertThrows(NullPointerException.class, () -> new Payslip(efua, gross, tax, null));
+        assertThrows(NullPointerException.class, () -> new Payslip(null, gross, "LOW", tax, net));
+        assertThrows(NullPointerException.class, () -> new Payslip(efua, null, "LOW", tax, net));
+        assertThrows(NullPointerException.class, () -> new Payslip(efua, gross, null, tax, net));
+        assertThrows(NullPointerException.class, () -> new Payslip(efua, gross, "LOW", null, net));
+        assertThrows(NullPointerException.class, () -> new Payslip(efua, gross, "LOW", tax, null));
     }
 }
