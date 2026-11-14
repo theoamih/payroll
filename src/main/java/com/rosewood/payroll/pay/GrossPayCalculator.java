@@ -34,16 +34,19 @@ public class GrossPayCalculator {
      * <p>Base pay and overtime are added together before rounding, so gross pay is
      * rounded only once.
      *
-     * @param hoursWorked the hours worked in the pay period
-     * @param hourlyRate  the pay for one ordinary hour, at any precision
+     * @param hoursWorkedInPeriod the hours worked in the pay period
+     * @param rateForOneHour      the pay for one ordinary hour
      * @return gross pay, in whole pesewas
-     * @throws InvalidPayInputException if hoursWorked is negative or hourlyRate is not
+     * @throws InvalidPayInputException if the hours are negative or the rate is not
      *                                  above zero
      * @throws NullPointerException     if either argument is null
      */
-    public Money calculate(BigDecimal hoursWorked, BigDecimal hourlyRate) throws InvalidPayInputException {
-        Objects.requireNonNull(hoursWorked, "hoursWorked must not be null");
-        Objects.requireNonNull(hourlyRate, "hourlyRate must not be null");
+    public Money calculate(Hours hoursWorkedInPeriod, HourlyRate rateForOneHour) throws InvalidPayInputException {
+        Objects.requireNonNull(hoursWorkedInPeriod, "hoursWorked must not be null");
+        Objects.requireNonNull(rateForOneHour, "hourlyRate must not be null");
+
+        BigDecimal hoursWorked = hoursWorkedInPeriod.value();
+        BigDecimal hourlyRate = rateForOneHour.value();
 
         validateHoursWorked(hoursWorked);
         validateHourlyRate(hourlyRate);

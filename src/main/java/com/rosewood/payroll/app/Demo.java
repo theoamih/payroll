@@ -6,6 +6,8 @@ import com.rosewood.payroll.employee.EmployeeRepository;
 import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
 import com.rosewood.payroll.netpay.PayrollCalculator;
 import com.rosewood.payroll.pay.GrossPayCalculator;
+import com.rosewood.payroll.pay.HourlyRate;
+import com.rosewood.payroll.pay.Hours;
 import com.rosewood.payroll.tax.RosewoodTaxBands;
 
 import java.math.BigDecimal;
@@ -41,10 +43,18 @@ public class Demo {
                 repository, new GrossPayCalculator(), RosewoodTaxBands.schedule());
         PayslipPrinter printer = new PayslipPrinter(System.out, System.err);
 
-        printPayslip(calculator, printer, "e1", new BigDecimal("40"), new BigDecimal("20"));
-        printPayslip(calculator, printer, "e2", new BigDecimal("50"), new BigDecimal("30"));
-        printPayslip(calculator, printer, "unknown", new BigDecimal("40"), new BigDecimal("20"));
-        printPayslip(calculator, printer, "e1", new BigDecimal("-10"), new BigDecimal("20"));
+        printPayslip(calculator, printer, "e1", hours("40"), rate("20"));
+        printPayslip(calculator, printer, "e2", hours("50"), rate("30"));
+        printPayslip(calculator, printer, "unknown", hours("40"), rate("20"));
+        printPayslip(calculator, printer, "e1", hours("-10"), rate("20"));
+    }
+
+    private static Hours hours(String value) {
+        return new Hours(new BigDecimal(value));
+    }
+
+    private static HourlyRate rate(String value) {
+        return new HourlyRate(new BigDecimal(value));
     }
 
     /**
@@ -63,7 +73,7 @@ public class Demo {
      * @param rate       the pay for one ordinary hour
      */
     private static void printPayslip(PayrollCalculator calculator, PayslipPrinter printer,
-                                     String employeeId, BigDecimal hours, BigDecimal rate) {
+                                     String employeeId, Hours hours, HourlyRate rate) {
         try {
             printer.print(calculator.calculatePayslip(employeeId, hours, rate));
         } catch (PayrollException e) {

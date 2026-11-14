@@ -5,11 +5,12 @@ import com.rosewood.payroll.employee.EmployeeNotFoundException;
 import com.rosewood.payroll.employee.EmployeeRepository;
 import com.rosewood.payroll.money.Money;
 import com.rosewood.payroll.pay.GrossPayCalculator;
+import com.rosewood.payroll.pay.HourlyRate;
+import com.rosewood.payroll.pay.Hours;
 import com.rosewood.payroll.pay.InvalidPayInputException;
 import com.rosewood.payroll.tax.TaxBand;
 import com.rosewood.payroll.tax.TaxSchedule;
 
-import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
@@ -51,14 +52,14 @@ public class PayrollCalculator {
      *
      * @param employeeId  the employee being paid
      * @param hoursWorked the hours worked in the pay period
-     * @param hourlyRate  the pay for one ordinary hour, at any precision
+     * @param hourlyRate  the pay for one ordinary hour
      * @return the payslip, with gross pay, tax band, tax and net pay
-     * @throws InvalidPayInputException  if hoursWorked is negative or hourlyRate is not
+     * @throws InvalidPayInputException  if the hours are negative or the rate is not
      *                                   above zero
      * @throws EmployeeNotFoundException if no employee has the given id
      * @throws NullPointerException      if any argument is null
      */
-    public Payslip calculatePayslip(String employeeId, BigDecimal hoursWorked, BigDecimal hourlyRate)
+    public Payslip calculatePayslip(String employeeId, Hours hoursWorked, HourlyRate hourlyRate)
             throws InvalidPayInputException, EmployeeNotFoundException {
 
         Objects.requireNonNull(employeeId, "employeeId must not be null");

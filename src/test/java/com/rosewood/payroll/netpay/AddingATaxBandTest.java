@@ -5,6 +5,8 @@ import com.rosewood.payroll.employee.Employee;
 import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
 import com.rosewood.payroll.money.Money;
 import com.rosewood.payroll.pay.GrossPayCalculator;
+import com.rosewood.payroll.pay.HourlyRate;
+import com.rosewood.payroll.pay.Hours;
 import com.rosewood.payroll.tax.FlatRateTaxBand;
 import com.rosewood.payroll.tax.InvalidTaxScheduleException;
 import com.rosewood.payroll.tax.RosewoodTaxBands;
@@ -34,7 +36,7 @@ class AddingATaxBandTest {
 
     private static final String EMPLOYEE = "e1";
 
-    private static final BigDecimal FORTY_HOURS = new BigDecimal("40");
+    private static final Hours FORTY_HOURS = new Hours(new BigDecimal("40"));
 
     private static final TaxBand VERY_HIGH = new FixedPlusPercentageTaxBand(
             "VERY HIGH", money("20000"), money("5000"), new BigDecimal("0.35"));
@@ -108,7 +110,7 @@ class AddingATaxBandTest {
                 RosewoodTaxBands.LOW, RosewoodTaxBands.MEDIUM, HIGH_UP_TO_TWENTY_THOUSAND, VERY_HIGH));
 
         Payslip payslip = calculatorWith(scheduleWithNewBand)
-                .calculatePayslip(EMPLOYEE, FORTY_HOURS, new BigDecimal("750"));
+                .calculatePayslip(EMPLOYEE, FORTY_HOURS, new HourlyRate(new BigDecimal("750")));
 
         assertEquals(money("30000.00"), payslip.grossPay());
         assertEquals("VERY HIGH", payslip.taxBand());
@@ -131,7 +133,8 @@ class AddingATaxBandTest {
         TaxSchedule scheduleWithNewBand = new TaxSchedule(List.of(
                 RosewoodTaxBands.LOW, RosewoodTaxBands.MEDIUM, HIGH_UP_TO_TWENTY_THOUSAND, VERY_HIGH));
 
-        Payslip payslip = calculatorWith(scheduleWithNewBand).calculatePayslip(EMPLOYEE, hours, rate);
+        Payslip payslip = calculatorWith(scheduleWithNewBand)
+                .calculatePayslip(EMPLOYEE, new Hours(hours), new HourlyRate(rate));
 
         assertEquals(expectedBand, payslip.taxBand());
         assertEquals(money(expectedNet), payslip.netPay());

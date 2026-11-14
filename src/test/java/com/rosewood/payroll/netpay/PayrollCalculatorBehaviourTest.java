@@ -7,6 +7,8 @@ import com.rosewood.payroll.employee.EmployeeRepository;
 import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
 import com.rosewood.payroll.money.Money;
 import com.rosewood.payroll.pay.GrossPayCalculator;
+import com.rosewood.payroll.pay.HourlyRate;
+import com.rosewood.payroll.pay.Hours;
 import com.rosewood.payroll.pay.InvalidPayInputException;
 import com.rosewood.payroll.tax.RosewoodTaxBands;
 import com.rosewood.payroll.tax.TaxSchedule;
@@ -38,9 +40,9 @@ class PayrollCalculatorBehaviourTest {
 
     private static final String KNOWN_EMPLOYEE = "e1";
 
-    private static final BigDecimal FORTY_HOURS = new BigDecimal("40");
+    private static final Hours FORTY_HOURS = hours("40");
 
-    private static final BigDecimal RATE_OF_TWENTY = new BigDecimal("20");
+    private static final HourlyRate RATE_OF_TWENTY = rate("20");
 
     private final PayrollCalculator calculator = calculatorWith(
             new InMemoryEmployeeRepository(List.of(new Employee(KNOWN_EMPLOYEE, "Efua Sarpong"))));
@@ -53,6 +55,14 @@ class PayrollCalculatorBehaviourTest {
 
     private static Money money(String amount) {
         return new Money(new BigDecimal(amount));
+    }
+
+    private static Hours hours(String value) {
+        return new Hours(new BigDecimal(value));
+    }
+
+    private static HourlyRate rate(String value) {
+        return new HourlyRate(new BigDecimal(value));
     }
 
     @Nested
@@ -90,7 +100,7 @@ class PayrollCalculatorBehaviourTest {
         void taxesGrossPayAtTheRateOfItsBand(BigDecimal hours, BigDecimal rate, String description,
                                              String expectedBand, String expectedNet) throws PayrollException {
 
-            Payslip payslip = calculator.calculatePayslip(KNOWN_EMPLOYEE, hours, rate);
+            Payslip payslip = calculator.calculatePayslip(KNOWN_EMPLOYEE, new Hours(hours), new HourlyRate(rate));
 
             assertEquals(expectedBand, payslip.taxBand());
             assertEquals(money(expectedNet), payslip.netPay());
@@ -110,7 +120,7 @@ class PayrollCalculatorBehaviourTest {
         void paysHoursOverFortyAtTimeAndAHalf(BigDecimal hours, BigDecimal rate, String rule, String expectedNet)
                 throws PayrollException {
 
-            Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, hours, rate).netPay();
+            Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, new Hours(hours), new HourlyRate(rate)).netPay();
 
             assertEquals(money(expectedNet), net);
         }
@@ -120,7 +130,7 @@ class PayrollCalculatorBehaviourTest {
     // the failures below, which the starter code also reported as zero.
     @Test
     void paysNothingForZeroHoursWorked() throws PayrollException {
-        Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, BigDecimal.ZERO, RATE_OF_TWENTY).netPay();
+        Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, hours("0"), RATE_OF_TWENTY).netPay();
 
         assertEquals(money("0.00"), net);
     }
@@ -138,7 +148,7 @@ class PayrollCalculatorBehaviourTest {
 
             PayrollCalculator calculatorForKwame = calculatorWith(new InMemoryEmployeeRepository(List.of(kwame)));
 
-            Payslip payslip = calculatorForKwame.calculatePayslip("e2", new BigDecimal("50"), new BigDecimal("30"));
+            Payslip payslip = calculatorForKwame.calculatePayslip("e2", hours("50"), rate("30"));
 
             assertSame(kwame, payslip.employee());
             assertEquals(money("1650.00"), payslip.grossPay());
@@ -204,7 +214,7 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsNegativeHours() {
             InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, new BigDecimal("-10"), RATE_OF_TWENTY),
+                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, hours("-10"), RATE_OF_TWENTY),
                     "negative hours must be rejected");
 
             assertEquals("hoursWorked", error.getField());
@@ -217,7 +227,7 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsHoursJustBelowZero() {
             InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, new BigDecimal("-0.01"), RATE_OF_TWENTY));
+                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, hours("-0.01"), RATE_OF_TWENTY));
 
             assertEquals("hoursWorked", error.getField());
         }
@@ -226,7 +236,7 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsANegativeRate() {
             InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, FORTY_HOURS, new BigDecimal("-20")),
+                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, FORTY_HOURS, rate("-20")),
                     "a negative hourly rate must be rejected");
 
             assertEquals("hourlyRate", error.getField());
@@ -239,7 +249,7 @@ class PayrollCalculatorBehaviourTest {
         @Test
         void rejectsAZeroRate() {
             InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
-                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, FORTY_HOURS, BigDecimal.ZERO));
+                    () -> calculator.calculatePayslip(KNOWN_EMPLOYEE, FORTY_HOURS, rate("0")));
 
             assertEquals("hourlyRate", error.getField());
         }
@@ -263,7 +273,7 @@ class PayrollCalculatorBehaviourTest {
             PayrollCalculator calculatorWithMockStore = calculatorWith(repository);
 
             assertThrows(InvalidPayInputException.class,
-                    () -> calculatorWithMockStore.calculatePayslip(KNOWN_EMPLOYEE, new BigDecimal("-10"), RATE_OF_TWENTY));
+                    () -> calculatorWithMockStore.calculatePayslip(KNOWN_EMPLOYEE, hours("-10"), RATE_OF_TWENTY));
 
             verifyNoInteractions(repository);
         }
@@ -284,7 +294,7 @@ class PayrollCalculatorBehaviourTest {
         void paysAnAmountInWholePesewas(BigDecimal hours, BigDecimal rate, String expectedNet)
                 throws PayrollException {
 
-            Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, hours, rate).netPay();
+            Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, new Hours(hours), new HourlyRate(rate)).netPay();
 
             assertEquals(money(expectedNet), net);
         }
@@ -294,7 +304,7 @@ class PayrollCalculatorBehaviourTest {
         // have made the tax 0.00, so this test pins the chosen rule.
         @Test
         void roundsHalfAPesewaOfTaxUp() throws PayrollException {
-            Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, BigDecimal.ONE, new BigDecimal("0.10")).netPay();
+            Money net = calculator.calculatePayslip(KNOWN_EMPLOYEE, hours("1"), rate("0.10")).netPay();
 
             assertEquals(money("0.09"), net);
         }
