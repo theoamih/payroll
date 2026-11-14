@@ -15,6 +15,11 @@ import java.util.Optional;
  * <p>How much tax a band takes is entirely its own rule. A new kind of band, with a
  * rule the existing bands do not have, is added by writing a new implementation of
  * this interface. None of the existing bands, and nothing that uses them, has to change.
+ *
+ * <p>Implementations must be immutable: a band's name, bounds and rule must not change
+ * after it is created. {@link TaxSchedule} checks that the bands fit together only
+ * once, when it is created, so a band that changed its bounds afterwards could open a
+ * gap or an overlap that nothing would detect.
  */
 public interface TaxBand {
 
