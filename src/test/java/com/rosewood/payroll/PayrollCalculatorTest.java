@@ -3,6 +3,7 @@ package com.rosewood.payroll;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -14,7 +15,7 @@ class PayrollCalculatorTest {
     private static final double FLOATING_POINT_TOLERANCE = 1e-9;
 
     @Test
-    void calculatesNetPay() {
+    void calculatesNetPay() throws PayrollException {
         PayrollCalculator calculator = new PayrollCalculator(
                 new InMemoryEmployeeRepository(List.of(new Employee("e1", "Efua Sarpong"))));
         double net = calculator.calculateNetPay("e1", 40, 20);
@@ -23,10 +24,10 @@ class PayrollCalculatorTest {
     }
 
     @Test
-    void calculatesOvertimePay() {
+    void calculatesOvertimePay() throws PayrollException {
         // Mock the dependency, not the class under test, so the real pay calculation runs.
         EmployeeRepository repository = mock(EmployeeRepository.class);
-        when(repository.findById("e2")).thenReturn(new Employee("e2", "Kwame Owusu"));
+        when(repository.findById("e2")).thenReturn(Optional.of(new Employee("e2", "Kwame Owusu")));
         PayrollCalculator calculator = new PayrollCalculator(repository);
 
         double net = calculator.calculateNetPay("e2", 50, 30);
@@ -37,7 +38,7 @@ class PayrollCalculatorTest {
     }
 
     @Test
-    void returnsPayForAnEmployee() {
+    void returnsPayForAnEmployee() throws PayrollException {
         PayrollCalculator calculator = new PayrollCalculator(
                 new InMemoryEmployeeRepository(List.of(new Employee("e1", "Efua Sarpong"))));
         double net = calculator.calculateNetPay("e1", 35, 25);

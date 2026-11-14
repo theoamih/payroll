@@ -4,9 +4,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -19,8 +19,16 @@ class InMemoryEmployeeRepositoryTest {
     void findsEachEmployeeItWasGivenById() {
         InMemoryEmployeeRepository repository = new InMemoryEmployeeRepository(List.of(efua, kwame));
 
-        assertSame(efua, repository.findById("e1"));
-        assertSame(kwame, repository.findById("e2"));
+        assertSame(efua, repository.findById("e1").orElseThrow());
+        assertSame(kwame, repository.findById("e2").orElseThrow());
+    }
+
+    // C2: an unknown id is reported as an empty Optional, not null.
+    @Test
+    void reportsAnUnknownIdAsEmpty() {
+        InMemoryEmployeeRepository repository = new InMemoryEmployeeRepository(List.of(efua));
+
+        assertEquals(Optional.empty(), repository.findById("unknown"));
     }
 
     // C10: the repository used to create e1 and e2 itself. It now holds only what it is given.
@@ -28,7 +36,7 @@ class InMemoryEmployeeRepositoryTest {
     void holdsNoEmployeesItWasNotGiven() {
         InMemoryEmployeeRepository repository = new InMemoryEmployeeRepository(List.of());
 
-        assertNull(repository.findById("e1"));
+        assertEquals(Optional.empty(), repository.findById("e1"));
     }
 
     @Test

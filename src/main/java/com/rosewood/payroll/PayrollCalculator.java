@@ -10,10 +10,21 @@ public class PayrollCalculator {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
     }
 
-    public double calculateNetPay(String employeeId, double hoursWorked, double hourlyRate) {
-        try {
-            Employee employee = repository.findById(employeeId);
+    /**
+     * Works out an employee's net pay for the hours worked.
+     *
+     * @throws EmployeeNotFoundException if no employee has the given id
+     * @throws NullPointerException if employeeId is null
+     */
+    public double calculateNetPay(String employeeId, double hoursWorked, double hourlyRate)
+            throws EmployeeNotFoundException {
+        Objects.requireNonNull(employeeId, "employeeId must not be null");
+        // Checked before any pay is worked out, so pay is never calculated for someone
+        // who is not on record.
+        Employee employee = repository.findById(employeeId)
+                .orElseThrow(() -> new EmployeeNotFoundException(employeeId));
 
+        try {
             double gross = hoursWorked * hourlyRate;
 
             // overtime: extra hours beyond 40 are paid at time-and-a-half
@@ -35,7 +46,7 @@ public class PayrollCalculator {
             System.out.println("Net pay for " + employee.getName() + ": GHS " + net);
             return net;
         } catch (Exception e) {
-            // something went wrong (for example the employee was not found) - return zero
+            // something went wrong - return zero
             return 0;
         }
     }

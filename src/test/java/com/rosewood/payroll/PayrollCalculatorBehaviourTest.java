@@ -55,7 +55,8 @@ class PayrollCalculatorBehaviourTest {
                 "40, 125,     HIGH band starts at 5000,     3750.00",
                 "40, 200,     HIGH band,                    6000.00",
         })
-        void taxesGrossPayAtTheRateOfItsBand(double hours, double rate, String band, double expectedNet) {
+        void taxesGrossPayAtTheRateOfItsBand(double hours, double rate, String band, double expectedNet)
+                throws PayrollException {
             assertEquals(expectedNet, calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate),
                     FLOATING_POINT_TOLERANCE);
         }
@@ -71,38 +72,40 @@ class PayrollCalculatorBehaviourTest {
                 "41,   20, one hour over 40 is paid at time-and-a-half,     788.50",
                 "50,   30, ten hours over 40 are paid at time-and-a-half,   1402.50",
         })
-        void paysHoursOverFortyAtTimeAndAHalf(double hours, double rate, String rule, double expectedNet) {
+        void paysHoursOverFortyAtTimeAndAHalf(double hours, double rate, String rule, double expectedNet)
+                throws PayrollException {
             assertEquals(expectedNet, calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate),
                     FLOATING_POINT_TOLERANCE);
         }
     }
 
     @Test
-    void paysNothingForZeroHoursWorked() {
+    void paysNothingForZeroHoursWorked() throws PayrollException {
         assertEquals(0.0, calculator.calculateNetPay(KNOWN_EMPLOYEE, 0, 20), FLOATING_POINT_TOLERANCE);
     }
 
-    // The tests below describe behaviour the starter code does not have yet, so they fail
-    // on it. Each carries the known-defect tag, which keeps it out of the default build
-    // (run them with: mvn test -Pknown-defects). The tag is removed when the defect is fixed.
-    // C1 to C4 refer to the problems in ANALYSIS.md.
+    // Tests tagged known-defect describe behaviour the code does not have yet, so they fail.
+    // The tag keeps them out of the default build (run them with: mvn test -Pknown-defects)
+    // and is removed when the defect is fixed. C1 to C4 refer to the problems in ANALYSIS.md.
 
     @Nested
     class MissingEmployee {
 
-        // C1, C2
+        // C2: fixed. The starter code returned 0.0 here.
         @Test
-        @Tag(KNOWN_DEFECT)
         void rejectsAnEmployeeWhoDoesNotExist() {
-            assertThrows(Exception.class, () -> calculator.calculateNetPay("unknown", 40, 20),
+            EmployeeNotFoundException error = assertThrows(EmployeeNotFoundException.class,
+                    () -> calculator.calculateNetPay("unknown", 40, 20),
                     "an employee who does not exist must be rejected, not paid");
+            assertEquals("unknown", error.getEmployeeId());
+            assertEquals("No employee found with id 'unknown'", error.getMessage());
         }
 
-        // C1, C2
+        // C2: fixed. The starter code returned 0.0 here. A null id is a mistake in the
+        // calling code, not a missing record, so it is a NullPointerException.
         @Test
-        @Tag(KNOWN_DEFECT)
         void rejectsAMissingEmployeeId() {
-            assertThrows(Exception.class, () -> calculator.calculateNetPay(null, 40, 20),
+            assertThrows(NullPointerException.class, () -> calculator.calculateNetPay(null, 40, 20),
                     "a missing employee id must be rejected, not paid");
         }
     }
@@ -155,7 +158,7 @@ class PayrollCalculatorBehaviourTest {
                 "41,   0.10",
                 "37.5, 13.33",
         })
-        void paysAnAmountInWholePesewas(double hours, double rate) {
+        void paysAnAmountInWholePesewas(double hours, double rate) throws PayrollException {
             double net = calculator.calculateNetPay(KNOWN_EMPLOYEE, hours, rate);
             int decimalPlaces = BigDecimal.valueOf(net).stripTrailingZeros().scale();
             assertTrue(decimalPlaces <= 2, () -> "net pay must be a whole number of pesewas, but was " + net);
