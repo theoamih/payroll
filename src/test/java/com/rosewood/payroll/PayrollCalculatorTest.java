@@ -15,7 +15,8 @@ class PayrollCalculatorTest {
     void calculatesNetPay() {
         PayrollCalculator calculator = new PayrollCalculator();
         double net = calculator.calculateNetPay("e1", 40, 20);
-        assertTrue(net > 0); // it returned some pay
+        // 40 h at 20 is a gross of 800, in the LOW band (5%): 800 - 40 = 760
+        assertEquals(760.0, net, FLOATING_POINT_TOLERANCE);
     }
 
     @Test
