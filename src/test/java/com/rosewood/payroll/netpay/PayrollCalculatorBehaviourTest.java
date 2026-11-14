@@ -29,10 +29,7 @@ import static org.mockito.Mockito.when;
  * <p>The expected amounts were worked out by hand, so they show the pay rules
  * independently of the code, and they protect those rules while the code is refactored.
  *
- * <p>Tests tagged {@code known-defect} describe behaviour the code does not have yet,
- * so they fail. The tag keeps them out of the default build, and they can be run on
- * their own with {@code mvn test -Pknown-defects}. The tag is removed when the defect is
- * fixed. C1 to C4 refer to the problems described in ANALYSIS.md.
+ * <p>C1 to C4 refer to the problems described in ANALYSIS.md.
  */
 class PayrollCalculatorBehaviourTest {
 

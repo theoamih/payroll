@@ -16,10 +16,6 @@
         <jacoco.version>0.8.12</jacoco.version>
         <pitest.version>1.16.1</pitest.version>
         <pitest.junit5.version>1.2.1</pitest.junit5.version>
-        <!-- Tests tagged known-defect describe behaviour the code does not have yet.
-             The default build leaves them out; the known-defects profile runs only them. -->
-        <test.groups></test.groups>
-        <test.excludedGroups>known-defect</test.excludedGroups>
     </properties>
 
     <dependencyManagement>
@@ -67,10 +63,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
-                <configuration>
-                    <groups>${test.groups}</groups>
-                    <excludedGroups>${test.excludedGroups}</excludedGroups>
-                </configuration>
             </plugin>
 
             <!-- Coverage: mvn verify, then open target/site/jacoco/index.html -->
@@ -111,22 +103,8 @@
                     <targetTests>
                         <param>com.rosewood.payroll.*</param>
                     </targetTests>
-                    <excludedGroups>
-                        <param>known-defect</param>
-                    </excludedGroups>
                 </configuration>
             </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <!-- mvn test -Pknown-defects : runs only the known-defect tests, which are expected to fail -->
-        <profile>
-            <id>known-defects</id>
-            <properties>
-                <test.groups>known-defect</test.groups>
-                <test.excludedGroups></test.excludedGroups>
-            </properties>
-        </profile>
-    </profiles>
 </project>

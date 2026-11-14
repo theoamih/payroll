@@ -287,10 +287,13 @@ up from 2. The two it still misses aren't gaps in the tests:
 For each defect in C1 to C4, I wrote a test that describes the **correct**
 behaviour. On the starter code every one of them fails, and the failure message
 is the evidence. These tests are tagged `known-defect`, so the normal build leaves
-them out and stays green. To see them fail:
+them out and stays green. All of these defects have since been fixed, so to see the
+tests fail, check out the code as it was when they were written:
 
 ```bash
+git checkout analysis-complete
 mvn test -Pknown-defects
+git switch -                                                 # back to where you were
 ```
 
 Result on the starter code: 8 run, 8 fail.
@@ -316,8 +319,14 @@ Each test is tightened when its fix is made.
 
 ### Keeping the evidence
 
-These tests stay in the project. When a defect is fixed, its test loses the
-`known-defect` tag and joins the normal build, where it keeps checking the fix.
+When a defect was fixed, its test lost the `known-defect` tag and joined the normal
+build, where it keeps checking the fix. Six of the eight tests are still in the
+project under the same names, with stricter assertions. The two about hours that
+are not a number or are infinite were removed when hours and rate became
+`BigDecimal`, which has no such values, so those inputs can no longer be passed at
+all. Once no tagged tests were left, the `known-defects` build profile was removed
+too.
+
 The code as it was when these results were recorded is tagged `analysis-complete`
 in git. Checking out that tag and running `mvn test -Pknown-defects` shows every
-failure above, even after the fixes are in.
+failure above.
