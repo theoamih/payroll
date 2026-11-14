@@ -13,6 +13,8 @@ that checks what the code actually does.
   tests, written before any code was changed.
 - This README covers how to run the project, how it is built, and why it is built
   that way.
+- The improvement beyond the brief is that tax set-up mistakes fail loudly instead
+  of producing wrong pay. See [Improvement beyond the brief](#improvement-beyond-the-brief).
 
 ## Running it
 
@@ -186,6 +188,73 @@ one was added with the `Payslip` check it relies on.
 rules" means how much tax it takes from that gross. If the new band depended on
 something other than gross pay, such as the employee's status, the `TaxBand`
 interface would have to change.
+
+## Improvement beyond the brief
+
+**Tax set-up mistakes fail loudly instead of producing wrong pay.**
+
+The brief asks that a new tax band can be added without rewriting existing code. The
+`TaxBand` interface does that. The brief does not ask that a *wrong* set of bands be
+refused, and that is where the risk is: adding a band means editing the list of
+bands, and a typo in a limit does not crash anything. It pays someone the wrong
+amount.
+
+### What happens with one typo
+
+Suppose MEDIUM is set to end at 4000 instead of 5000, while HIGH still starts at 5000:
+
+| Version | Result |
+|---|---|
+| The starter (`else if (gross < 4000)`) | Nothing visible. Everyone earning 4000 to 4999 is taxed 25% instead of 15%, and no test notices |
+| This design without the check | Nothing at startup. On payday, the first person earning 4000 to 4999 gets an error, after the run has started |
+| This design with the check | The program does not start, and nobody is paid wrongly |
+
+### What is checked
+
+When a [TaxSchedule](src/main/java/com/rosewood/payroll/tax/TaxSchedule.java) is
+created, which happens when the program starts, it checks that the bands fit
+together. If they do not, it throws an `InvalidTaxScheduleException` that names the
+bands and amounts involved:
+
+| Mistake | Message, after `invalid tax schedule: ` |
+|---|---|
+| No bands | `there must be at least one band` |
+| The lowest band does not start at 0 | `the lowest band, LOW, must start at GHS 0.00 but starts at GHS 100.00` |
+| A gap between two bands | `there is a gap between band LOW, which ends at GHS 1000.00, and band HIGH, which starts at GHS 1200.00` |
+| Two bands overlap | `band LOW, which ends at GHS 1200.00, overlaps band HIGH, which starts at GHS 1000.00` |
+| A band below the top has no upper limit | `band HIGH has no upper limit, so band VERY HIGH can never apply` |
+| The top band has an upper limit | `the highest band, HIGH, must have no upper limit, but ends at GHS 9000.00` |
+
+The startup check sees each band's range, not the amount of tax its rule takes. A
+band whose rule is wrong is caught by the second half of this improvement: `Payslip`
+refuses tax below zero or above gross pay, so a band like that fails on the first
+payslip it touches.
+
+The exception is unchecked because it is a set-up mistake. Nothing can recover from
+it while the program runs. The only fix is to correct the bands.
+
+### Proof
+
+- [TaxScheduleTest](src/test/java/com/rosewood/payroll/tax/TaxScheduleTest.java)
+  has a test for each mistake in the table, asserting the exact message, and checks
+  that a single band covering everything is accepted. PIT kills all 21 mutants in
+  `TaxSchedule`.
+- [AddingATaxBandTest](src/test/java/com/rosewood/payroll/netpay/AddingATaxBandTest.java)
+  covers the likeliest real mistake, forgetting to cap HIGH when VERY HIGH is added,
+  and a band whose rule takes more than the gross pay.
+- [PayslipTest](src/test/java/com/rosewood/payroll/netpay/PayslipTest.java) covers
+  the tax check on the payslip.
+
+### Seeing it happen
+
+1. In [RosewoodTaxBands.java](src/main/java/com/rosewood/payroll/tax/RosewoodTaxBands.java),
+   change MEDIUM's upper limit from `money("5000")` to `money("4000")`.
+2. Run the demo:
+   `mvn compile exec:java "-Dexec.mainClass=com.rosewood.payroll.app.Demo"`.
+   No payslip is printed, and the run stops with:
+   `invalid tax schedule: there is a gap between band MEDIUM, which ends at GHS 4000.00, and band HIGH, which starts at GHS 5000.00`
+3. Undo the change:
+   `git restore src/main/java/com/rosewood/payroll/tax/RosewoodTaxBands.java`
 
 ## Failures and exceptions
 
