@@ -5,12 +5,14 @@ import com.rosewood.payroll.employee.Employee;
 import com.rosewood.payroll.employee.EmployeeNotFoundException;
 import com.rosewood.payroll.employee.EmployeeRepository;
 import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
+import com.rosewood.payroll.pay.InvalidPayInputException;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -156,37 +159,92 @@ class PayrollCalculatorBehaviourTest {
     @Nested
     class InvalidInput {
 
-        // C3: negative hours would produce negative pay.
+        // C3: negative hours would produce negative pay. The exception names the field
+        // and the value, so whoever fixes the timesheet knows exactly what to correct.
         @Test
-        @Tag(KNOWN_DEFECT)
         void rejectsNegativeHours() {
-            assertThrows(Exception.class, () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, -10, 20),
+            InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
+                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, -10, 20),
                     "negative hours must be rejected");
+
+            assertEquals("hoursWorked", error.getField());
+            assertEquals(-10.0, error.getRejectedValue());
+            assertEquals("hoursWorked must be a finite number of zero or more, but was -10.0", error.getMessage());
         }
 
-        // C3: a negative rate would produce negative pay.
+        // C3: the smallest step below zero is refused too, so the check is "below zero",
+        // not "well below zero".
         @Test
-        @Tag(KNOWN_DEFECT)
-        void rejectsANegativeRate() {
-            assertThrows(Exception.class, () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, 40, -20),
-                    "a negative hourly rate must be rejected");
+        void rejectsHoursJustBelowZero() {
+            InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
+                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, -0.01, 20));
+
+            assertEquals("hoursWorked", error.getField());
         }
 
         // C3: hours that are not a number would produce pay that is not a number.
         @Test
-        @Tag(KNOWN_DEFECT)
         void rejectsHoursThatAreNotANumber() {
-            assertThrows(Exception.class, () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, Double.NaN, 20),
+            InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
+                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, Double.NaN, 20),
                     "hours that are not a number must be rejected");
+
+            assertEquals("hoursWorked", error.getField());
         }
 
         // C3: infinite hours would produce pay that is not a number.
         @Test
-        @Tag(KNOWN_DEFECT)
         void rejectsInfiniteHours() {
-            assertThrows(Exception.class,
+            InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
                     () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, Double.POSITIVE_INFINITY, 20),
                     "infinite hours must be rejected");
+
+            assertEquals("hoursWorked", error.getField());
+        }
+
+        // C3: a negative rate would produce negative pay.
+        @Test
+        void rejectsANegativeRate() {
+            InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
+                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, 40, -20),
+                    "a negative hourly rate must be rejected");
+
+            assertEquals("hourlyRate", error.getField());
+            assertEquals(-20.0, error.getRejectedValue());
+            assertEquals("hourlyRate must be a finite number greater than zero, but was -20.0", error.getMessage());
+        }
+
+        // A zero rate would quietly pay nothing for real work, which looks like a valid
+        // payslip. It is almost certainly a data-entry mistake, so it is refused.
+        @Test
+        void rejectsAZeroRate() {
+            InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
+                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, 40, 0));
+
+            assertEquals("hourlyRate", error.getField());
+        }
+
+        @ParameterizedTest(name = "rate {0}")
+        @ValueSource(doubles = {Double.NaN, Double.POSITIVE_INFINITY})
+        void rejectsARateThatIsNotAFiniteNumber(double rate) {
+            InvalidPayInputException error = assertThrows(InvalidPayInputException.class,
+                    () -> calculator.calculateNetPay(KNOWN_EMPLOYEE, 40, rate));
+
+            assertEquals("hourlyRate", error.getField());
+        }
+
+        // Invalid input is refused before the employee is looked up, so a payslip that
+        // cannot be produced never touches the employee store.
+        @Test
+        void rejectsInvalidInputBeforeLookingUpTheEmployee() {
+            EmployeeRepository repository = mock(EmployeeRepository.class);
+
+            PayrollCalculator calculatorWithMockStore = new PayrollCalculator(repository);
+
+            assertThrows(InvalidPayInputException.class,
+                    () -> calculatorWithMockStore.calculateNetPay(KNOWN_EMPLOYEE, -10, 20));
+
+            verifyNoInteractions(repository);
         }
     }
 

@@ -1,7 +1,7 @@
 package com.rosewood.payroll.app;
 
+import com.rosewood.payroll.PayrollException;
 import com.rosewood.payroll.employee.Employee;
-import com.rosewood.payroll.employee.EmployeeNotFoundException;
 import com.rosewood.payroll.employee.EmployeeRepository;
 import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
 import com.rosewood.payroll.netpay.PayrollCalculator;
@@ -18,7 +18,8 @@ import java.util.List;
 public class Demo {
 
     /**
-     * Prints net pay for two known employees and one that does not exist.
+     * Prints net pay for two known employees, then shows how an unknown employee and
+     * invalid hours are refused.
      *
      * @param args not used
      */
@@ -32,6 +33,7 @@ public class Demo {
         printNetPay(calculator, "Result e1, 40h @ 20    ", "e1", 40, 20);
         printNetPay(calculator, "Result e2, 50h @ 30    ", "e2", 50, 30);
         printNetPay(calculator, "Result unknown employee", "unknown", 40, 20);
+        printNetPay(calculator, "Result e1, -10h @ 20   ", "e1", -10, 20);
     }
 
     /**
@@ -39,7 +41,9 @@ public class Demo {
      *
      * <p>Failures are handled here, at the edge of the program, because this is where
      * there is someone to tell. A refused payslip is reported on the error stream and
-     * the remaining payslips are still worked out.
+     * the remaining payslips are still worked out. Catching {@link PayrollException}
+     * covers every failure the service reports on purpose, while a programming error
+     * still stops the program instead of being reported as a refused payslip.
      *
      * @param calculator the service that works out net pay
      * @param label      the text printed before the result
@@ -53,7 +57,7 @@ public class Demo {
             double net = calculator.calculateNetPay(employeeId, hours, rate);
 
             System.out.println(label + " -> " + net);
-        } catch (EmployeeNotFoundException e) {
+        } catch (PayrollException e) {
             System.err.println(label + " -> refused: " + e.getMessage());
         }
     }
