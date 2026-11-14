@@ -4,26 +4,35 @@ import com.rosewood.payroll.employee.Employee;
 import com.rosewood.payroll.employee.EmployeeNotFoundException;
 import com.rosewood.payroll.employee.EmployeeRepository;
 import com.rosewood.payroll.money.Money;
+import com.rosewood.payroll.pay.GrossPayCalculator;
 import com.rosewood.payroll.pay.InvalidPayInputException;
 
 import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
- * Works out an employee's net pay from the hours they worked and their hourly rate.
+ * Works out an employee's payslip from the hours they worked and their hourly rate.
+ *
+ * <p>It coordinates the steps rather than doing them: gross pay is worked out by a
+ * {@link GrossPayCalculator}, and employees are looked up in an
+ * {@link EmployeeRepository}.
  */
 public class PayrollCalculator {
 
     private final EmployeeRepository repository;
 
+    private final GrossPayCalculator grossPayCalculator;
+
     /**
-     * Creates a calculator that looks employees up in the given store.
+     * Creates a calculator from the parts it coordinates.
      *
-     * @param repository where employee records are looked up
-     * @throws NullPointerException if repository is null
+     * @param repository         where employee records are looked up
+     * @param grossPayCalculator works out gross pay from hours and rate
+     * @throws NullPointerException if either argument is null
      */
-    public PayrollCalculator(EmployeeRepository repository) {
+    public PayrollCalculator(EmployeeRepository repository, GrossPayCalculator grossPayCalculator) {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
+        this.grossPayCalculator = Objects.requireNonNull(grossPayCalculator, "grossPayCalculator must not be null");
     }
 
     /**
@@ -45,32 +54,14 @@ public class PayrollCalculator {
             throws InvalidPayInputException, EmployeeNotFoundException {
 
         Objects.requireNonNull(employeeId, "employeeId must not be null");
-        Objects.requireNonNull(hoursWorked, "hoursWorked must not be null");
-        Objects.requireNonNull(hourlyRate, "hourlyRate must not be null");
 
-        // Checked before the lookup, so a bad timesheet is reported as what it is and
-        // the employee store is not touched for a payslip that cannot be produced.
-        validateHoursWorked(hoursWorked);
-        validateHourlyRate(hourlyRate);
+        // The timesheet is checked first, so a bad timesheet is reported as what it is
+        // and the employee store is not touched for a payslip that cannot be produced.
+        Money gross = grossPayCalculator.calculate(hoursWorked, hourlyRate);
 
-        // Checked before any pay is worked out, so pay is never calculated for someone
-        // who is not on record.
+        // No payslip is produced for someone who is not on record.
         Employee employee = repository.findById(employeeId)
                 .orElseThrow(() -> new EmployeeNotFoundException(employeeId));
-
-        BigDecimal unroundedGross = hoursWorked.multiply(hourlyRate);
-
-        // overtime: extra hours beyond 40 are paid at time-and-a-half
-        if (hoursWorked.compareTo(new BigDecimal("40")) > 0) {
-            BigDecimal overtimeHours = hoursWorked.subtract(new BigDecimal("40"));
-            BigDecimal overtimePremium = overtimeHours.multiply(hourlyRate).multiply(new BigDecimal("0.5"));
-
-            unroundedGross = unroundedGross.add(overtimePremium);
-        }
-
-        // Rounded to pesewas once, after base pay and overtime are added together, so
-        // gross pay is never rounded twice.
-        Money gross = new Money(unroundedGross);
 
         // tax band, worked out from gross pay
         BigDecimal taxRate;
@@ -88,33 +79,5 @@ public class PayrollCalculator {
         Money net = gross.minus(tax);
 
         return new Payslip(employee, gross, tax, net);
-    }
-
-    /**
-     * Zero hours is allowed, because an employee may not have worked in the period.
-     * Negative hours are not, because they would produce negative pay.
-     *
-     * @param hoursWorked the hours to check
-     * @throws InvalidPayInputException if the hours are negative
-     */
-    private static void validateHoursWorked(BigDecimal hoursWorked) throws InvalidPayInputException {
-        if (hoursWorked.signum() < 0) {
-            throw new InvalidPayInputException("hoursWorked", hoursWorked, "zero or more");
-        }
-    }
-
-    /**
-     * A rate of zero is refused as well as a negative one. Nobody is employed at
-     * GHS 0 an hour, so a zero rate is almost certainly a data-entry mistake, and
-     * paying 0 without complaint is exactly the kind of believable wrong payslip
-     * this service must not produce.
-     *
-     * @param hourlyRate the rate to check
-     * @throws InvalidPayInputException if the rate is zero or negative
-     */
-    private static void validateHourlyRate(BigDecimal hourlyRate) throws InvalidPayInputException {
-        if (hourlyRate.signum() <= 0) {
-            throw new InvalidPayInputException("hourlyRate", hourlyRate, "greater than zero");
-        }
     }
 }

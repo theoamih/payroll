@@ -6,6 +6,7 @@ import com.rosewood.payroll.employee.EmployeeNotFoundException;
 import com.rosewood.payroll.employee.EmployeeRepository;
 import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
 import com.rosewood.payroll.money.Money;
+import com.rosewood.payroll.pay.GrossPayCalculator;
 import com.rosewood.payroll.pay.InvalidPayInputException;
 
 import org.junit.jupiter.api.Nested;
@@ -39,8 +40,14 @@ class PayrollCalculatorBehaviourTest {
 
     private static final BigDecimal RATE_OF_TWENTY = new BigDecimal("20");
 
-    private final PayrollCalculator calculator = new PayrollCalculator(
+    private final PayrollCalculator calculator = calculatorWith(
             new InMemoryEmployeeRepository(List.of(new Employee(KNOWN_EMPLOYEE, "Efua Sarpong"))));
+
+    // Every test builds its calculator here, so a test only states the part it cares
+    // about, the employee store, and the real pay rules are always the ones under test.
+    private static PayrollCalculator calculatorWith(EmployeeRepository repository) {
+        return new PayrollCalculator(repository, new GrossPayCalculator());
+    }
 
     private static Money money(String amount) {
         return new Money(new BigDecimal(amount));
@@ -49,11 +56,15 @@ class PayrollCalculatorBehaviourTest {
     @Nested
     class Construction {
 
-        // A null repository would otherwise only fail later, inside calculatePayslip,
-        // far from the code that made the mistake. It is refused straight away.
+        // A missing part would otherwise only fail later, inside calculatePayslip, far
+        // from the code that made the mistake. It is refused straight away.
         @Test
-        void refusesAMissingRepository() {
-            assertThrows(NullPointerException.class, () -> new PayrollCalculator(null));
+        void refusesAMissingPart() {
+            GrossPayCalculator grossPayCalculator = new GrossPayCalculator();
+            EmployeeRepository repository = new InMemoryEmployeeRepository(List.of());
+
+            assertThrows(NullPointerException.class, () -> new PayrollCalculator(null, grossPayCalculator));
+            assertThrows(NullPointerException.class, () -> new PayrollCalculator(repository, null));
         }
     }
 
@@ -117,8 +128,7 @@ class PayrollCalculatorBehaviourTest {
         void showsTheEmployeeGrossPayTaxAndNetPay() throws PayrollException {
             Employee kwame = new Employee("e2", "Kwame Owusu");
 
-            PayrollCalculator calculatorForKwame = new PayrollCalculator(
-                    new InMemoryEmployeeRepository(List.of(kwame)));
+            PayrollCalculator calculatorForKwame = calculatorWith(new InMemoryEmployeeRepository(List.of(kwame)));
 
             Payslip payslip = calculatorForKwame.calculatePayslip("e2", new BigDecimal("50"), new BigDecimal("30"));
 
@@ -166,7 +176,7 @@ class PayrollCalculatorBehaviourTest {
             EmployeeRepository repository = mock(EmployeeRepository.class);
             when(repository.findById(KNOWN_EMPLOYEE)).thenThrow(failure);
 
-            PayrollCalculator calculatorWithFailingStore = new PayrollCalculator(repository);
+            PayrollCalculator calculatorWithFailingStore = calculatorWith(repository);
 
             IllegalStateException thrown = assertThrows(IllegalStateException.class,
                     () -> calculatorWithFailingStore.calculatePayslip(KNOWN_EMPLOYEE, FORTY_HOURS, RATE_OF_TWENTY));
@@ -241,7 +251,7 @@ class PayrollCalculatorBehaviourTest {
         void rejectsInvalidInputBeforeLookingUpTheEmployee() {
             EmployeeRepository repository = mock(EmployeeRepository.class);
 
-            PayrollCalculator calculatorWithMockStore = new PayrollCalculator(repository);
+            PayrollCalculator calculatorWithMockStore = calculatorWith(repository);
 
             assertThrows(InvalidPayInputException.class,
                     () -> calculatorWithMockStore.calculatePayslip(KNOWN_EMPLOYEE, new BigDecimal("-10"), RATE_OF_TWENTY));

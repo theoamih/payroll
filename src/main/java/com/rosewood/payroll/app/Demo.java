@@ -5,6 +5,7 @@ import com.rosewood.payroll.employee.Employee;
 import com.rosewood.payroll.employee.EmployeeRepository;
 import com.rosewood.payroll.employee.InMemoryEmployeeRepository;
 import com.rosewood.payroll.netpay.PayrollCalculator;
+import com.rosewood.payroll.pay.GrossPayCalculator;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -35,7 +36,7 @@ public class Demo {
                 new Employee("e1", "Efua Sarpong"),
                 new Employee("e2", "Kwame Owusu")));
 
-        PayrollCalculator calculator = new PayrollCalculator(repository);
+        PayrollCalculator calculator = new PayrollCalculator(repository, new GrossPayCalculator());
         PayslipPrinter printer = new PayslipPrinter(System.out, System.err);
 
         printPayslip(calculator, printer, "e1", new BigDecimal("40"), new BigDecimal("20"));
