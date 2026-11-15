@@ -22,10 +22,18 @@ import java.util.List;
  */
 public class Demo {
 
+    private final PayrollCalculator calculator;
+
+    private final PayslipPrinter printer;
+
     /**
-     * Not meant to be created. The demo is run through {@link #main(String[])}.
+     * Holds the two parts every payslip in the demo uses, so each call only states what
+     * changes from one payslip to the next. Private, because the demo is only created
+     * and run by {@link #main(String[])}.
      */
-    private Demo() {
+    private Demo(PayrollCalculator calculator, PayslipPrinter printer) {
+        this.calculator = calculator;
+        this.printer = printer;
     }
 
     /**
@@ -43,10 +51,12 @@ public class Demo {
                 repository, new GrossPayCalculator(), RosewoodTaxBands.schedule());
         PayslipPrinter printer = new PayslipPrinter(System.out, System.err);
 
-        printPayslip(calculator, printer, "e1", hours("40"), rate("20"));
-        printPayslip(calculator, printer, "e2", hours("50"), rate("30"));
-        printPayslip(calculator, printer, "unknown", hours("40"), rate("20"));
-        printPayslip(calculator, printer, "e1", hours("-10"), rate("20"));
+        Demo demo = new Demo(calculator, printer);
+
+        demo.printPayslip("e1", hours("40"), rate("20"));
+        demo.printPayslip("e2", hours("50"), rate("30"));
+        demo.printPayslip("unknown", hours("40"), rate("20"));
+        demo.printPayslip("e1", hours("-10"), rate("20"));
     }
 
     private static Hours hours(String value) {
@@ -66,14 +76,11 @@ public class Demo {
      * failure the service reports on purpose, while a programming error still stops
      * the program instead of being reported as a refused payslip.
      *
-     * @param calculator the service that works out the payslip
-     * @param printer    where the payslip or the refusal is printed
      * @param employeeId the employee being paid
      * @param hours      the hours worked
      * @param rate       the pay for one ordinary hour
      */
-    private static void printPayslip(PayrollCalculator calculator, PayslipPrinter printer,
-                                     String employeeId, Hours hours, HourlyRate rate) {
+    private void printPayslip(String employeeId, Hours hours, HourlyRate rate) {
         try {
             printer.print(calculator.calculatePayslip(employeeId, hours, rate));
         } catch (PayrollException e) {

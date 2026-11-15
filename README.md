@@ -317,7 +317,7 @@ alone, which [ANALYSIS.md](ANALYSIS.md) uses, are shown in brackets.
 | Measure | Starter | Now |
 |---|---|---|
 | Tests | 3 | 187 |
-| JaCoCo line coverage | 21 of 34 lines (10 of 16 in `PayrollCalculator`) | 199 of 215 lines, and all 16 missed lines are in `Demo` |
+| JaCoCo line coverage | 21 of 34 lines (10 of 16 in `PayrollCalculator`) | 199 of 220 lines, and all 21 missed lines are in `Demo` |
 | JaCoCo branch coverage | 2 of 6 | 56 of 56 |
 | PIT mutants killed | 3 of 21 (2 of 15 in `PayrollCalculator`) | 71 of 80 |
 
