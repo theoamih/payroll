@@ -42,6 +42,17 @@ class InMemoryEmployeeRepositoryTest {
         assertEquals(Optional.empty(), repository.findById("e1"));
     }
 
+    // A null id is a mistake in the calling code. Reporting it as "not found" would hide
+    // that mistake, so it is refused instead.
+    @Test
+    void refusesToLookUpANullId() {
+        InMemoryEmployeeRepository repository = new InMemoryEmployeeRepository(List.of(efua));
+
+        NullPointerException error = assertThrows(NullPointerException.class, () -> repository.findById(null));
+
+        assertEquals("id must not be null", error.getMessage());
+    }
+
     @Test
     void refusesTwoEmployeesWithTheSameId() {
         Employee anotherE1 = new Employee("e1", "Someone Else");
@@ -54,7 +65,10 @@ class InMemoryEmployeeRepositoryTest {
 
     @Test
     void refusesAMissingListOfEmployees() {
-        assertThrows(NullPointerException.class, () -> new InMemoryEmployeeRepository(null));
+        NullPointerException error = assertThrows(NullPointerException.class,
+                () -> new InMemoryEmployeeRepository(null));
+
+        assertEquals("employees must not be null", error.getMessage());
     }
 
     @Test
@@ -62,6 +76,9 @@ class InMemoryEmployeeRepositoryTest {
         // List.of does not allow null, so Arrays.asList is used to build a list containing one.
         List<Employee> employeesWithANull = Arrays.asList(efua, null);
 
-        assertThrows(NullPointerException.class, () -> new InMemoryEmployeeRepository(employeesWithANull));
+        NullPointerException error = assertThrows(NullPointerException.class,
+                () -> new InMemoryEmployeeRepository(employeesWithANull));
+
+        assertEquals("employees must not contain null", error.getMessage());
     }
 }

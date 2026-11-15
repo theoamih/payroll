@@ -39,6 +39,8 @@ public class InMemoryEmployeeRepository implements EmployeeRepository {
 
     @Override
     public Optional<Employee> findById(String id) {
+        Objects.requireNonNull(id, "id must not be null");
+
         return Optional.ofNullable(employees.get(id));
     }
 }
