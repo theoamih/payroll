@@ -1,6 +1,8 @@
 package com.rosewood.payroll.pay;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.math.BigDecimal;
 
@@ -15,6 +17,16 @@ class HoursTest {
         Hours hours = new Hours(new BigDecimal("37.5"));
 
         assertEquals(new BigDecimal("37.5"), hours.value());
+    }
+
+    // Hours deliberately accepts any value, so every timesheet rule stays in one place,
+    // GrossPayCalculator, which refuses negative hours with InvalidPayInputException.
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {"-10", "0"})
+    void acceptsAnyValueBecauseGrossPayCalculatorChecksTheRules(String value) {
+        Hours hours = new Hours(new BigDecimal(value));
+
+        assertEquals(new BigDecimal(value), hours.value());
     }
 
     @Test
