@@ -14,17 +14,32 @@ import java.util.List;
  */
 public final class RosewoodTaxBands {
 
+    // These are declared before the bands because static fields are set in the order
+    // they are written, and the bands below are built from them.
+
+    // Each limit is shared by two bands: one ends there and the next starts there.
+    // Writing it once means the two bands cannot be given different values by a typo.
+    private static final Money LOW_TO_MEDIUM = money("1000");
+
+    private static final Money MEDIUM_TO_HIGH = money("5000");
+
+    private static final BigDecimal LOW_RATE = new BigDecimal("0.05");
+
+    private static final BigDecimal MEDIUM_RATE = new BigDecimal("0.15");
+
+    private static final BigDecimal HIGH_RATE = new BigDecimal("0.25");
+
     /** Gross pay below 1000 is taxed at 5%. */
     public static final TaxBand LOW = FlatRateTaxBand.between(
-            "LOW", money("0"), money("1000"), new BigDecimal("0.05"));
+            "LOW", money("0"), LOW_TO_MEDIUM, LOW_RATE);
 
     /** Gross pay from 1000 up to, but not including, 5000 is taxed at 15%. */
     public static final TaxBand MEDIUM = FlatRateTaxBand.between(
-            "MEDIUM", money("1000"), money("5000"), new BigDecimal("0.15"));
+            "MEDIUM", LOW_TO_MEDIUM, MEDIUM_TO_HIGH, MEDIUM_RATE);
 
     /** Gross pay of 5000 or more is taxed at 25%. */
     public static final TaxBand HIGH = FlatRateTaxBand.startingAt(
-            "HIGH", money("5000"), new BigDecimal("0.25"));
+            "HIGH", MEDIUM_TO_HIGH, HIGH_RATE);
 
     /**
      * Not meant to be created. It only holds the band definitions.

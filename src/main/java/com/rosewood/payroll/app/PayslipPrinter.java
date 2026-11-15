@@ -39,10 +39,10 @@ public class PayslipPrinter {
      */
     public void print(Payslip payslip) {
         payslips.println("Payslip for " + payslip.employee().getName() + " (" + payslip.employee().getId() + ")");
-        payslips.println(line("Gross pay", payslip.grossPay()));
+        payslips.println(line("Gross pay", payslip.grossPay().toString()));
         payslips.println(line("Tax band", payslip.taxBand()));
-        payslips.println(line("Tax", payslip.tax()));
-        payslips.println(line("Net pay", payslip.netPay()));
+        payslips.println(line("Tax", payslip.tax().toString()));
+        payslips.println(line("Net pay", payslip.netPay().toString()));
     }
 
     /**
@@ -59,7 +59,7 @@ public class PayslipPrinter {
      * Lays out one line of a payslip with the label on the left and the value lined
      * up on the right, so the values on a payslip sit under each other.
      */
-    private static String line(String label, Object value) {
+    private static String line(String label, String value) {
         return String.format("  %-10s%15s", label, value);
     }
 }

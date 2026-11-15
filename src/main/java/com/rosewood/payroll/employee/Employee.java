@@ -25,16 +25,18 @@ public class Employee {
      * @throws IllegalArgumentException if id or name is blank
      */
     public Employee(String id, String name) {
+        // Null is a mistake in the calling code, reported the same way as everywhere
+        // else in the project.
+        Objects.requireNonNull(id, "id must not be null");
+        Objects.requireNonNull(name, "name must not be null");
+
         this.id = requireNotBlank(id, "id");
         this.name = requireNotBlank(name, "name");
     }
 
-    // Null is a mistake in the calling code, reported the same way as everywhere else
-    // in the project. Blank is refused too, because a blank name prints an empty
-    // payslip heading and a blank id cannot sensibly be looked up.
+    // A blank name prints an empty payslip heading and a blank id cannot sensibly be
+    // looked up, so both are refused.
     private static String requireNotBlank(String value, String field) {
-        Objects.requireNonNull(value, field + " must not be null");
-
         if (value.isBlank()) {
             throw new IllegalArgumentException(field + " must not be blank");
         }
